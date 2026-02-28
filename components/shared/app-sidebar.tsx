@@ -60,6 +60,7 @@ const navItems = [
     title: "CRM",
     icon: Users,
     items: [
+      { title: "Dashboard", href: "/crm" },
       { title: "Leads", href: "/crm/leads" },
       { title: "Deals", href: "/crm/deals" },
       { title: "Contacts", href: "/crm/contacts" },
