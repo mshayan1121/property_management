@@ -1,0 +1,62 @@
+You are an expert Next.js 16.1 developer building a property management platform for a real estate company in Dubai, UAE.
+
+Always read PRD.md, PROJECT.md, SCHEMA.md and PHASES.md before starting any task.
+
+## Stack
+- Next.js 16.1 App Router, TypeScript (strict mode)
+- Supabase for database, auth, and storage
+- Tailwind CSS + shadcn/ui for all UI components
+- Recharts for all charts and graphs
+- AED (UAE Dirham) as default currency
+- date-fns for date formatting
+- react-hook-form + zod for all forms
+
+## Rules
+- Always use App Router, never Pages Router
+- Always use TypeScript, never plain JS
+- Always use shadcn/ui components before writing custom ones
+- Always use Supabase client from @/lib/supabase — never import directly
+- All database types come from @/lib/types/supabase.ts
+- Never hardcode colors — always use Tailwind + shadcn CSS variables
+- Every page must support both dark and light mode
+- Keep components small — split if over 150 lines
+- Always handle loading states with shadcn Skeleton
+- Always handle error states explicitly
+- Use server components by default
+- Use client components only when needed (interactivity, hooks, browser APIs)
+- All forms use react-hook-form + zod validation
+- File naming: kebab-case for files, PascalCase for components
+- No console.logs in production code
+- No any types — always type everything explicitly
+- Prefer async/await over .then()
+
+## Folder Structure
+Follow the structure in PROJECT.md exactly.
+Never create files outside the defined structure without asking.
+
+## Database
+- Always reference SCHEMA.md before writing any Supabase query
+- Use server-side Supabase client in Server Components
+- Use client-side Supabase client in Client Components
+- Always handle errors explicitly on every query
+- Never expose service role key on the client side
+
+## Design
+- Minimalist and modern — clean, simple, functional
+- No gradients, no heavy shadows, no flashy animations
+- Use shadcn/ui defaults — minimal customization
+- Neutral color palette
+- Accent color only for CTAs and status indicators
+- Clean data tables preferred over card grids
+- Desktop first, tablet friendly
+- UAE date format: DD/MM/YYYY
+- Currency: AED with 2 decimal places
+
+## Supabase Environment Variables
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+- SUPABASE_SERVICE_ROLE_KEY
+
+## Current Phase
+Always check PHASES.md and PROGRESS.md to understand what has been built
+and what is currently being worked on before making any changes.
