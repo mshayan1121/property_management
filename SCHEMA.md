@@ -157,10 +157,85 @@ RLS enabled on all Phase 2 tables. Company-based policies: users only see their 
 RLS enabled on all Phase 3 tables. Company-based policies: users only see their company's data.
 
 ## Phase 4 Tables (Accounts & Finance)
-To be added after Phase 3 is complete.
+
+### vendors
+- id: uuid PK
+- name: text not null
+- email: text nullable
+- phone: text nullable
+- category: text (maintenance/utilities/insurance/cleaning/security/management/other)
+- address: text nullable
+- trn: text nullable
+- status: text (active/inactive) default active
+- notes: text nullable
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
+
+### invoices
+- id: uuid PK
+- reference: text unique (INV-000001)
+- contract_id: uuid FK contracts nullable
+- tenant_id: uuid FK tenants nullable
+- contact_id: uuid FK contacts nullable
+- type: text (rent/sale/service/other)
+- amount: numeric(12,2) not null
+- vat_amount: numeric(12,2) default 0
+- total_amount: numeric(12,2) not null
+- due_date: date not null
+- status: text (draft/sent/paid/overdue/cancelled) default draft
+- notes: text nullable
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
+
+### payments
+- id: uuid PK
+- reference: text unique (PAY-000001)
+- invoice_id: uuid FK invoices nullable
+- amount: numeric(12,2) not null
+- payment_date: date not null
+- method: text (cash/cheque/bank_transfer/pdc)
+- notes: text nullable
+- company_id: uuid FK companies
+- created_at: timestamptz
+
+### pdcs
+- id: uuid PK
+- reference: text unique (PDC-000001)
+- invoice_id: uuid FK invoices nullable
+- tenant_id: uuid FK tenants nullable
+- cheque_number: text not null
+- bank_name: text not null
+- amount: numeric(12,2) not null
+- cheque_date: date not null
+- status: text (pending/deposited/cleared/bounced/cancelled) default pending
+- notes: text nullable
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
+
+### bills
+- id: uuid PK
+- reference: text unique (BILL-000001)
+- property_id: uuid FK properties nullable
+- vendor_id: uuid FK vendors nullable
+- category: text (maintenance/utilities/insurance/cleaning/security/management/other)
+- description: text nullable
+- amount: numeric(12,2) not null
+- vat_amount: numeric(12,2) default 0
+- total_amount: numeric(12,2) not null
+- due_date: date not null
+- status: text (pending/paid/overdue/cancelled) default pending
+- notes: text nullable
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
+
+RLS enabled on all Phase 4 tables. Company-based policies: users only see their company's data.
 
 ## Phase 5 Tables (HR & Payroll)
-To be added after Phase 4 is complete.
+Out of scope — handled externally via Zoho.
 
 ## Phase 6 Tables (Operations)
 To be added after Phase 5 is complete.

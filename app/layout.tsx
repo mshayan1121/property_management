@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PropManager — Shaun Property Platform",
+  title: "Jetset Business — Shaun Property Platform",
   description: "Property management platform for Dubai/UAE",
 };
 

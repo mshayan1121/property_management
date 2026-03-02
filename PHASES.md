@@ -55,7 +55,7 @@ Status: ✅ Complete
 ---
 
 ## Phase 4 — Accounts & Finance
-Status: In Progress
+Status: ✅ Complete
 
 ### Features
 - Invoices (auto-generated from deals/contracts, status tracking)
@@ -72,28 +72,8 @@ Status: In Progress
 
 ---
 
-## Phase 5 — HR & Payroll
-Status: Pending
-
-### Features
-- Employees (database, departments, documents)
-- Attendance (check-in/check-out, monthly summary)
-- Leave management (requests, types, approval workflow)
-- Payroll (monthly processing, payslip generation)
-- Recruitment (job postings, candidate pipeline)
-- Performance reviews and goal tracking
-- HR reports:
-  - Employee Reports
-  - Payroll Reports
-  - Attendance Reports
-  - Performance Reports
-  - Recruitment Reports
-  - Compliance Reports
-
----
-
-## Phase 6 — Operations
-Status: Pending
+## Phase 5 — Operations
+Status: In Progress
 
 ### Features
 - Projects (linked to properties, status, categories)

@@ -1,7 +1,7 @@
-# PRD — Shaun Property Platform
+# PRD — Jetset Business
 
 ## 1. Overview
-A full-stack internal property management platform for Shaun Daswani's company.
+A full-stack internal property management platform for Shaun Daswani's company (Jetset Business).
 Built to replicate PropExcel's core functionality.
 Dubai/UAE focused, single-company use, with clean minimal UI.
 
@@ -113,43 +113,7 @@ Dubai/UAE focused, single-company use, with clean minimal UI.
 - Cash Flow Statement
 - Outstanding payments
 
-### 4.4 HR & Payroll
-**Employees**
-- Employee database
-- Department assignment
-- Documents upload
-
-**Attendance**
-- Daily check-in/check-out
-- Monthly attendance summary
-
-**Leave Management**
-- Leave requests
-- Leave types: annual, sick, unpaid
-- Approval workflow
-
-**Payroll**
-- Monthly payroll processing
-- Basic salary + deductions + additions
-- Payslip generation
-
-**Recruitment**
-- Job postings
-- Candidate tracking pipeline
-
-**Performance**
-- Performance reviews
-- Goal tracking
-
-**Reports (6 categories)**
-- Employee Reports
-- Payroll Reports
-- Attendance Reports
-- Performance Reports
-- Recruitment Reports
-- Compliance Reports
-
-### 4.5 Operations
+### 4.4 Operations
 **Projects**
 - Linked to properties
 - Status: pending, in progress, completed, cancelled
@@ -206,12 +170,11 @@ Dubai/UAE focused, single-company use, with clean minimal UI.
 ## 7. Build Phases
 | Phase | Module | Status |
 |-------|--------|--------|
-| 1 | Foundation (auth, layout, sidebar, overview dashboard) | In Progress |
-| 2 | CRM | Pending |
-| 3 | Property Management | Pending |
-| 4 | Accounts & Finance | Pending |
-| 5 | HR & Payroll | Pending |
-| 6 | Operations | Pending |
+| 1 | Foundation (auth, layout, sidebar, overview dashboard) | ✅ Complete |
+| 2 | CRM | ✅ Complete |
+| 3 | Property Management | ✅ Complete |
+| 4 | Accounts & Finance | ✅ Complete |
+| 5 | Operations | In Progress |
 
 ## 8. Out of Scope (for now)
 - AI features
@@ -219,3 +182,4 @@ Dubai/UAE focused, single-company use, with clean minimal UI.
 - Mobile app
 - Multi-company/SaaS mode
 - Third-party integrations
+- **HR & Payroll** — Out of scope; handled externally via Zoho

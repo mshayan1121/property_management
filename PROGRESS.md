@@ -57,10 +57,21 @@ Completed: 01/03/2026
 - [x] Fixed SelectItem empty value bug
 
 ## Phase 4 — Accounts & Finance
+Status: ✅ Complete
+Completed: 01/03/2026
+
+### Completed
+- [x] Accounts dashboard with stat cards and charts
+- [x] Invoices management (add/edit/delete, VAT auto-calc, mark as paid)
+- [x] Invoice detail page with payment history
+- [x] PDC management (post-dated cheques, 7-day alerts)
+- [x] Payments management (auto-marks invoice as paid)
+- [x] Bills management (add/edit/delete, VAT auto-calc)
+- [x] Vendors management (add/edit/delete)
+- [x] 4 Financial reports (P&L, Outstanding, VAT, Cash Flow)
+- [x] HR removed from sidebar
+- [x] App renamed to Jetset Business
+- [x] Sidebar icon updated to Building2, collapses to icon only
+
+## Phase 5 — Operations
 Status: In Progress
-
-## Phase 5 — HR & Payroll
-Status: Pending
-
-## Phase 6 — Operations
-Status: Pending

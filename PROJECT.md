@@ -1,4 +1,4 @@
-# Shaun Property Platform
+# Jetset Business
 
 ## Overview
 A full-stack property management platform for Shaun Daswani's company.
@@ -16,8 +16,8 @@ Dubai/UAE focused with AED currency and VAT compliance.
 1. CRM — Leads, Deals, Contacts, Contracts
 2. Property Management — Listings, Units, Tenants, Reports
 3. Accounts & Finance — Invoices, PDC, VAT, Vendors, P&L
-4. HR & Payroll — Employees, Attendance, Leave, Payroll
-5. Operations — Projects, Tasks, Maintenance, Vendors, Inventory
+4. Operations — Projects, Tasks, Maintenance, Inventory
+5. HR & Payroll — Out of scope (handled externally via Zoho)
 
 ## Users
 - Single company (Shaun's business)
@@ -47,11 +47,6 @@ Dubai/UAE focused with AED currency and VAT compliance.
       /bills
       /payments
       /reports
-    /hr
-      /employees
-      /payroll
-      /attendance
-      /recruitment
     /operations
       /tasks
       /projects
@@ -63,7 +58,6 @@ Dubai/UAE focused with AED currency and VAT compliance.
   /crm
   /properties
   /accounts
-  /hr
   /operations
 /lib
   /supabase

@@ -7,7 +7,6 @@ import {
   Users,
   Building2,
   Wallet,
-  Briefcase,
   Wrench,
   Settings,
   ChevronDown,
@@ -82,20 +81,13 @@ const navItems = [
     title: "Accounts",
     icon: Wallet,
     items: [
+      { title: "Dashboard", href: "/accounts" },
       { title: "Invoices", href: "/accounts/invoices" },
       { title: "Bills", href: "/accounts/bills" },
       { title: "Payments", href: "/accounts/payments" },
+      { title: "PDC", href: "/accounts/pdc" },
+      { title: "Vendors", href: "/accounts/vendors" },
       { title: "Reports", href: "/accounts/reports" },
-    ],
-  },
-  {
-    title: "HR",
-    icon: Briefcase,
-    items: [
-      { title: "Employees", href: "/hr/employees" },
-      { title: "Attendance", href: "/hr/attendance" },
-      { title: "Payroll", href: "/hr/payroll" },
-      { title: "Recruitment", href: "/hr/recruitment" },
     ],
   },
   {
@@ -135,12 +127,15 @@ export function AppSidebar({ user }: AppSidebarProps) {
       <SidebarHeader className="border-b border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link href="/overview">
-                <div className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-md font-semibold">
-                  P
-                </div>
-                <span className="font-semibold">PropManager</span>
+            <SidebarMenuButton size="lg" asChild tooltip="Jetset Business">
+              <Link
+                href="/overview"
+                className="flex items-center gap-2 transition-[justify-content] duration-200 ease-linear group-data-[collapsible=icon]:justify-center"
+              >
+                <Building2 className="size-6 shrink-0" />
+                <span className="truncate font-semibold text-base group-data-[collapsible=icon]:hidden">
+                  Jetset Business
+                </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

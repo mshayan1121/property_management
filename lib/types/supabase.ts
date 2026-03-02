@@ -264,6 +264,123 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["amenities"]["Insert"]>;
       };
+      invoices: {
+        Row: {
+          id: string;
+          reference: string;
+          contract_id: string | null;
+          tenant_id: string | null;
+          contact_id: string | null;
+          type: string;
+          amount: number;
+          vat_amount: number;
+          total_amount: number;
+          due_date: string;
+          status: string;
+          notes: string | null;
+          company_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["invoices"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          reference?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["invoices"]["Insert"]>;
+      };
+      payments: {
+        Row: {
+          id: string;
+          reference: string;
+          invoice_id: string | null;
+          amount: number;
+          payment_date: string;
+          method: string;
+          notes: string | null;
+          company_id: string;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["payments"]["Row"], "id" | "created_at"> & {
+          id?: string;
+          reference?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["payments"]["Insert"]>;
+      };
+      pdcs: {
+        Row: {
+          id: string;
+          reference: string;
+          invoice_id: string | null;
+          tenant_id: string | null;
+          cheque_number: string;
+          bank_name: string;
+          amount: number;
+          cheque_date: string;
+          status: string;
+          notes: string | null;
+          company_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["pdcs"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          reference?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["pdcs"]["Insert"]>;
+      };
+      bills: {
+        Row: {
+          id: string;
+          reference: string;
+          property_id: string | null;
+          vendor_id: string | null;
+          category: string;
+          description: string | null;
+          amount: number;
+          vat_amount: number;
+          total_amount: number;
+          due_date: string;
+          status: string;
+          notes: string | null;
+          company_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["bills"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          reference?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["bills"]["Insert"]>;
+      };
+      vendors: {
+        Row: {
+          id: string;
+          name: string;
+          email: string | null;
+          phone: string | null;
+          category: string | null;
+          address: string | null;
+          trn: string | null;
+          status: string;
+          notes: string | null;
+          company_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["vendors"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["vendors"]["Insert"]>;
+      };
     };
   };
 }
