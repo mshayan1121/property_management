@@ -30,6 +30,11 @@ Always read PRD.md, PROJECT.md, SCHEMA.md and PHASES.md before starting any task
 - No any types — always type everything explicitly
 - Prefer async/await over .then()
 
+## Select components (shadcn)
+- NEVER use `<SelectItem value="">` — Radix/shadcn Select does not support empty string value reliably and can cause bugs.
+- Always use `<SelectValue placeholder="Select something" />` for the "no selection" state.
+- For optional selects (e.g. optional contact), omit the empty SelectItem; use placeholder only. Handle empty in form with value="" or undefined and persist as null.
+
 ## Folder Structure
 Follow the structure in PROJECT.md exactly.
 Never create files outside the defined structure without asking.

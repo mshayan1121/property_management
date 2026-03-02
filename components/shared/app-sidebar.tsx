@@ -71,9 +71,11 @@ const navItems = [
     title: "Properties",
     icon: Building2,
     items: [
+      { title: "Dashboard", href: "/properties" },
       { title: "Listings", href: "/properties/listings" },
       { title: "Units", href: "/properties/units" },
       { title: "Tenants", href: "/properties/tenants" },
+      { title: "Reports", href: "/properties/reports" },
     ],
   },
   {

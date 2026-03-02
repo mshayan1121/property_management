@@ -176,6 +176,94 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["contracts"]["Insert"]>;
       };
+      properties: {
+        Row: {
+          id: string;
+          reference: string;
+          name: string;
+          type: string | null;
+          location: string;
+          address: string | null;
+          total_units: number;
+          status: string;
+          images: string[] | null;
+          company_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["properties"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          reference?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["properties"]["Insert"]>;
+      };
+      units: {
+        Row: {
+          id: string;
+          property_id: string;
+          unit_number: string;
+          floor: number | null;
+          size_sqft: number | null;
+          bedrooms: number | null;
+          bathrooms: number | null;
+          type: string | null;
+          status: string;
+          rent_amount: number;
+          company_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["units"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["units"]["Insert"]>;
+      };
+      tenants: {
+        Row: {
+          id: string;
+          reference: string;
+          contact_id: string | null;
+          unit_id: string | null;
+          full_name: string;
+          email: string | null;
+          phone: string | null;
+          lease_start: string;
+          lease_end: string;
+          monthly_rent: number;
+          payment_day: number;
+          status: string;
+          notes: string | null;
+          company_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["tenants"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          reference?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tenants"]["Insert"]>;
+      };
+      amenities: {
+        Row: {
+          id: string;
+          property_id: string;
+          name: string;
+          description: string | null;
+          company_id: string;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["amenities"]["Row"], "id" | "created_at"> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["amenities"]["Insert"]>;
+      };
     };
   };
 }

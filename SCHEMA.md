@@ -98,7 +98,63 @@ Being built phase by phase. Updated after each phase is complete.
 RLS enabled on all Phase 2 tables. Company-based policies: users only see their company's data.
 
 ## Phase 3 Tables (Property Management)
-To be added after Phase 2 is complete.
+
+### properties
+- id: uuid PK
+- reference: text unique (PROP-000001)
+- name: text not null
+- type: text (residential/commercial)
+- location: text not null
+- address: text nullable
+- total_units: integer default 0
+- status: text (active/inactive) default active
+- images: text[] default {}
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
+
+### units
+- id: uuid PK
+- property_id: uuid FK properties cascade delete
+- unit_number: text not null
+- floor: integer nullable
+- size_sqft: numeric(10,2) nullable
+- bedrooms: integer nullable
+- bathrooms: integer nullable
+- type: text (residential/commercial)
+- status: text (vacant/occupied) default vacant
+- rent_amount: numeric(12,2) default 0
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
+
+### tenants
+- id: uuid PK
+- reference: text unique (TEN-000001)
+- contact_id: uuid FK contacts nullable
+- unit_id: uuid FK units nullable
+- full_name: text not null
+- email: text nullable
+- phone: text nullable
+- lease_start: date not null
+- lease_end: date not null
+- monthly_rent: numeric(12,2) not null
+- payment_day: integer default 1
+- status: text (active/expired/terminated) default active
+- notes: text nullable
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
+
+### amenities
+- id: uuid PK
+- property_id: uuid FK properties cascade delete
+- name: text not null
+- description: text nullable
+- company_id: uuid FK companies
+- created_at: timestamptz
+
+RLS enabled on all Phase 3 tables. Company-based policies: users only see their company's data.
 
 ## Phase 4 Tables (Accounts & Finance)
 To be added after Phase 3 is complete.

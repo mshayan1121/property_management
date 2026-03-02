@@ -32,7 +32,7 @@ Status: ✅ Complete
 ---
 
 ## Phase 3 — Property Management
-Status: In Progress
+Status: ✅ Complete
 
 ### Features
 - Properties (add, edit, delete, residential/commercial)
@@ -55,7 +55,7 @@ Status: In Progress
 ---
 
 ## Phase 4 — Accounts & Finance
-Status: Pending
+Status: In Progress
 
 ### Features
 - Invoices (auto-generated from deals/contracts, status tracking)
