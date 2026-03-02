@@ -177,7 +177,6 @@ export function ContractForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
                   {deals.map((d) => (
                     <SelectItem key={d.id} value={d.id}>
                       {d.reference ?? d.id}
@@ -205,7 +204,6 @@ export function ContractForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
                   {contacts.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.full_name}
@@ -229,7 +227,7 @@ export function ContractForm({
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -304,7 +302,7 @@ export function ContractForm({
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>

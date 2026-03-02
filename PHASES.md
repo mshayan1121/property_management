@@ -16,7 +16,7 @@ Status: ✅ Complete
 ---
 
 ## Phase 2 — CRM
-Status: In Progress
+Status: ✅ Complete
 
 ### Features
 - Leads (add, edit, delete, list, filter by source/status)
@@ -32,7 +32,7 @@ Status: In Progress
 ---
 
 ## Phase 3 — Property Management
-Status: Pending
+Status: In Progress
 
 ### Features
 - Properties (add, edit, delete, residential/commercial)

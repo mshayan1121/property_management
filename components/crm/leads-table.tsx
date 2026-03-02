@@ -263,11 +263,11 @@ export function LeadsTable({
       </div>
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
-        <SheetContent className="overflow-y-auto sm:max-w-md">
+        <SheetContent className="overflow-y-auto sm:max-w-[600px]">
           <SheetHeader>
             <SheetTitle>Add Lead</SheetTitle>
           </SheetHeader>
-          <div className="mt-6">
+          <div className="mt-6 p-6 pt-0">
             <LeadForm
               companyId={companyId}
               profiles={profiles}
@@ -279,13 +279,13 @@ export function LeadsTable({
       </Sheet>
 
       <Sheet open={!!detailLead} onOpenChange={(o) => !o && setDetailLead(null)}>
-        <SheetContent className="overflow-y-auto sm:max-w-md">
+        <SheetContent className="overflow-y-auto sm:max-w-[600px]">
           {detailLead && (
             <>
               <SheetHeader>
                 <SheetTitle>{detailLead.full_name}</SheetTitle>
               </SheetHeader>
-              <div className="mt-6 space-y-4">
+              <div className="mt-6 space-y-4 p-6 pt-0">
                 <div>
                   <p className="text-muted-foreground text-sm">Email</p>
                   <p>{detailLead.email ?? "-"}</p>
@@ -340,13 +340,13 @@ export function LeadsTable({
       </Sheet>
 
       <Sheet open={!!editLead} onOpenChange={(o) => !o && setEditLead(null)}>
-        <SheetContent className="overflow-y-auto sm:max-w-md">
+        <SheetContent className="overflow-y-auto sm:max-w-[600px]">
           {editLead && (
             <>
               <SheetHeader>
                 <SheetTitle>Edit Lead</SheetTitle>
               </SheetHeader>
-              <div className="mt-6">
+              <div className="mt-6 p-6 pt-0">
                 <LeadForm
                   lead={editLead}
                   companyId={companyId}

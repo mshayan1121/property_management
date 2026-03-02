@@ -23,20 +23,24 @@ Completed: 28/02/2026
 
 ## Phase 2 — CRM
 Status: ✅ Complete
-Completed: 28/02/2026
+Completed: 03/03/2026
 
 ### Completed
-- [x] Phase 2 database tables (leads, contacts, deals, kyc_documents, contracts)
-- [x] RLS policies (company-based)
-- [x] CRM dashboard (stats, leads by source, deals by stage, recent leads)
-- [x] Leads management (table, search, filter, add/edit/delete, status badges)
+- [x] CRM Dashboard with stat cards and charts
+- [x] Leads management (add/edit/delete, search, filter, status badges)
 - [x] Deals management (Kanban, List, Chart, Timeline views)
-- [x] Deal detail page (KYC documents, activity, Generate Contract)
-- [x] Contacts management (table, search, filter, add/edit/delete)
-- [x] Contracts management (table, search, filter, add/edit/delete, document upload/download)
+- [x] Deal drag and drop between stages
+- [x] Deal detail page with KYC document upload
+- [x] Generate contract from deal
+- [x] Contacts management (add/edit/delete, filter by type)
+- [x] Contracts management (add/edit/delete, document upload)
+- [x] Commission auto-calculation
+- [x] All forms fixed with consistent spacing
+- [x] Hydration error fixed
+- [x] Select empty value bug fixed
 
 ## Phase 3 — Property Management
-Status: Pending
+Status: In Progress
 
 ## Phase 4 — Accounts & Finance
 Status: Pending

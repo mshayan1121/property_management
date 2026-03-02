@@ -220,7 +220,6 @@ export function LeadForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
                   {profiles.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.full_name}

@@ -268,11 +268,11 @@ export function ContractsTable({
       </div>
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
-        <SheetContent className="overflow-y-auto sm:max-w-md">
+        <SheetContent className="overflow-y-auto sm:max-w-[600px]">
           <SheetHeader>
             <SheetTitle>Add Contract</SheetTitle>
           </SheetHeader>
-          <div className="mt-6">
+          <div className="mt-6 p-6 pt-0">
             <ContractForm
               companyId={companyId}
               deals={deals}
@@ -291,13 +291,13 @@ export function ContractsTable({
         open={!!editContract}
         onOpenChange={(o) => !o && setEditContract(null)}
       >
-        <SheetContent className="overflow-y-auto sm:max-w-md">
+        <SheetContent className="overflow-y-auto sm:max-w-[600px]">
           {editContract && (
             <>
               <SheetHeader>
                 <SheetTitle>Edit Contract</SheetTitle>
               </SheetHeader>
-              <div className="mt-6">
+              <div className="mt-6 p-6 pt-0">
                 <ContractForm
                   contract={editContract}
                   companyId={companyId}

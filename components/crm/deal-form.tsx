@@ -156,7 +156,6 @@ export function DealForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
                   {leads.map((l) => (
                     <SelectItem key={l.id} value={l.id}>
                       {l.full_name}
@@ -184,7 +183,6 @@ export function DealForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
                   {contacts.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.full_name}
@@ -208,7 +206,7 @@ export function DealForm({
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -232,7 +230,7 @@ export function DealForm({
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select stage" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -347,7 +345,6 @@ export function DealForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
                   {profiles.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.full_name}

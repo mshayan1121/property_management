@@ -161,11 +161,11 @@ export function DealsKanban({
       </DndContext>
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
-        <SheetContent className="overflow-y-auto sm:max-w-md">
+        <SheetContent className="overflow-y-auto sm:max-w-[600px]">
           <SheetHeader>
             <SheetTitle>Add Deal</SheetTitle>
           </SheetHeader>
-          <div className="mt-6">
+          <div className="mt-6 p-6 pt-0">
             <DealForm
               companyId={companyId}
               leads={leads}

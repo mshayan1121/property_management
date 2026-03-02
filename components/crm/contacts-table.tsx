@@ -208,11 +208,11 @@ export function ContactsTable({
       </div>
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
-        <SheetContent className="overflow-y-auto sm:max-w-md">
+        <SheetContent className="overflow-y-auto sm:max-w-[600px]">
           <SheetHeader>
             <SheetTitle>Add Contact</SheetTitle>
           </SheetHeader>
-          <div className="mt-6">
+          <div className="mt-6 p-6 pt-0">
             <ContactForm
               companyId={companyId}
               onSuccess={() => {
@@ -226,13 +226,13 @@ export function ContactsTable({
       </Sheet>
 
       <Sheet open={!!editContact} onOpenChange={(o) => !o && setEditContact(null)}>
-        <SheetContent className="overflow-y-auto sm:max-w-md">
+        <SheetContent className="overflow-y-auto sm:max-w-[600px]">
           {editContact && (
             <>
               <SheetHeader>
                 <SheetTitle>Edit Contact</SheetTitle>
               </SheetHeader>
-              <div className="mt-6">
+              <div className="mt-6 p-6 pt-0">
                 <ContactForm
                   contact={editContact}
                   companyId={companyId}

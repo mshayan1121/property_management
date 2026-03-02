@@ -30,80 +30,70 @@ Being built phase by phase. Updated after each phase is complete.
 ## Phase 2 Tables (CRM)
 
 ### leads
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid | PK, default gen_random_uuid() |
-| full_name | text | not null |
-| email | text | nullable |
-| phone | text | nullable |
-| source | text | website, referral, social, portal, other |
-| status | text | new, contacted, qualified, lost (default: new) |
-| assigned_to | uuid | FK to profiles, nullable |
-| notes | text | nullable |
-| company_id | uuid | FK to companies |
-| created_at | timestamptz | default now() |
-| updated_at | timestamptz | default now() |
+- id: uuid PK
+- full_name: text not null
+- email: text nullable
+- phone: text nullable
+- source: text (website/referral/social/portal/other)
+- status: text (new/contacted/qualified/lost) default new
+- assigned_to: uuid FK profiles nullable
+- notes: text nullable
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
 
 ### contacts
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid | PK, default gen_random_uuid() |
-| full_name | text | not null |
-| email | text | nullable |
-| phone | text | nullable |
-| type | text | buyer, seller, tenant, landlord |
-| notes | text | nullable |
-| company_id | uuid | FK to companies |
-| created_at | timestamptz | default now() |
-| updated_at | timestamptz | default now() |
+- id: uuid PK
+- full_name: text not null
+- email: text nullable
+- phone: text nullable
+- type: text (buyer/seller/tenant/landlord)
+- notes: text nullable
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
 
 ### deals
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid | PK, default gen_random_uuid() |
-| reference | text | unique, format DEAL-000001 |
-| lead_id | uuid | FK to leads, nullable |
-| contact_id | uuid | FK to contacts, nullable |
-| type | text | sale, rental |
-| stage | text | qualified, viewed, negotiation, contract_draft, contract_signed |
-| value | numeric(12,2) | default 0 |
-| commission_rate | numeric(5,2) | default 0 |
-| commission_amount | numeric(12,2) | default 0 |
-| payment_type | text | cash, mortgage, bank_transfer, cheque |
-| assigned_to | uuid | FK to profiles, nullable |
-| notes | text | nullable |
-| company_id | uuid | FK to companies |
-| created_at | timestamptz | default now() |
-| updated_at | timestamptz | default now() |
+- id: uuid PK
+- reference: text unique (DEAL-000001)
+- lead_id: uuid FK leads nullable
+- contact_id: uuid FK contacts nullable
+- type: text (sale/rental)
+- stage: text (qualified/viewed/negotiation/contract_draft/contract_signed)
+- value: numeric(12,2)
+- commission_rate: numeric(5,2)
+- commission_amount: numeric(12,2)
+- payment_type: text (cash/mortgage/bank_transfer/cheque)
+- assigned_to: uuid FK profiles nullable
+- notes: text nullable
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
 
 ### kyc_documents
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid | PK, default gen_random_uuid() |
-| deal_id | uuid | FK to deals, on delete cascade |
-| name | text | not null |
-| file_url | text | not null |
-| file_type | text | nullable |
-| uploaded_by | uuid | FK to profiles |
-| created_at | timestamptz | default now() |
+- id: uuid PK
+- deal_id: uuid FK deals cascade delete
+- name: text not null
+- file_url: text not null
+- file_type: text nullable
+- uploaded_by: uuid FK profiles
+- created_at: timestamptz
 
 ### contracts
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid | PK, default gen_random_uuid() |
-| reference | text | unique, format CON-000001 |
-| deal_id | uuid | FK to deals, nullable |
-| contact_id | uuid | FK to contacts, nullable |
-| type | text | sale, rental |
-| start_date | date | nullable |
-| end_date | date | nullable |
-| value | numeric(12,2) | default 0 |
-| status | text | draft, active, expired, terminated (default: draft) |
-| document_url | text | nullable |
-| notes | text | nullable |
-| company_id | uuid | FK to companies |
-| created_at | timestamptz | default now() |
-| updated_at | timestamptz | default now() |
+- id: uuid PK
+- reference: text unique (CON-000001)
+- deal_id: uuid FK deals nullable
+- contact_id: uuid FK contacts nullable
+- type: text (sale/rental)
+- start_date: date nullable
+- end_date: date nullable
+- value: numeric(12,2)
+- status: text (draft/active/expired/terminated)
+- document_url: text nullable
+- notes: text nullable
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
 
 RLS enabled on all Phase 2 tables. Company-based policies: users only see their company's data.
 
