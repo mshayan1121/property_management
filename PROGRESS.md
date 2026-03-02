@@ -109,11 +109,27 @@ Completed: 03/03/2026
 - [x] must_change_password column added
 
 ## Phase 6.5 — Polish & Enhancements
+Status: ✅ Complete
+Completed: 03/03/2026
+
+### Completed
+- [x] Overview dashboard with real data (6 stat cards)
+- [x] Revenue vs Expenses chart with real data
+- [x] Deals by Stage chart with real data
+- [x] Alert cards (lease expiries, overdue invoices, PDCs)
+- [x] Recent activity tables (leads, deals, maintenance)
+- [x] Notifications system with bell icon
+- [x] Auto-generate notifications for lease expiry, overdue invoices, PDCs
+- [x] Mark as read / mark all as read
+- [x] Global search with real Supabase data
+- [x] Search across properties, tenants, contacts, deals, invoices, maintenance
+- [x] Ctrl+K keyboard shortcut for search
+- [x] Invoice PDF generation
+- [x] Bill PDF generation
+- [x] Overdue auto-detection for invoices and bills
+
+## Phase 7 — Security Hardening
 Status: In Progress
 
 ### Pending
-- [ ] Overview dashboard with real data
-- [ ] Notifications system
-- [ ] Global search
-- [ ] Invoice PDF generation
-- [ ] Overdue auto-detection
+- [ ] (TBD)

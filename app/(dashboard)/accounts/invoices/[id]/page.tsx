@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { InvoiceDetailClient } from "@/components/accounts/invoice-detail-client";
+import { InvoicePdfButton } from "@/components/pdf/invoice-pdf-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Suspense } from "react";
 
@@ -28,6 +29,12 @@ async function getInvoiceDetail(id: string) {
 
   const companyId = profile?.company_id;
   if (!companyId) return null;
+
+  const { data: company } = await supabase
+    .from("companies")
+    .select("name")
+    .eq("id", companyId)
+    .single();
 
   const { data: invoice, error } = await supabase
     .from("invoices")
@@ -90,6 +97,7 @@ async function getInvoiceDetail(id: string) {
     payments,
     pdcs,
     companyId,
+    companyName: company?.name ?? "Jetset Business",
   };
 }
 
@@ -111,7 +119,7 @@ export default async function InvoiceDetailPage({
 
   if (!data) notFound();
 
-  const { invoice, payments, pdcs, companyId } = data;
+  const { invoice, payments, pdcs, companyId, companyName } = data;
 
   return (
     <div className="space-y-6">
@@ -121,12 +129,34 @@ export default async function InvoiceDetailPage({
             <ArrowLeft className="size-4" />
           </Link>
         </Button>
-        <div>
+        <div className="flex-1">
           <h2 className="text-2xl font-bold tracking-tight">
             Invoice {invoice.reference}
           </h2>
           <p className="text-muted-foreground">Invoice details and payments</p>
         </div>
+        <InvoicePdfButton
+          data={{
+            reference: invoice.reference,
+            created_at: invoice.created_at,
+            due_date: invoice.due_date,
+            status: invoice.status,
+            type: invoice.type,
+            amount: invoice.amount,
+            vat_amount: invoice.vat_amount,
+            total_amount: invoice.total_amount,
+            billTo: {
+              name:
+                invoice.tenant_name != null
+                  ? [invoice.tenant_reference, invoice.tenant_name].filter(Boolean).join(" – ") || "—"
+                  : invoice.contact_name ?? "—",
+              email: null,
+              phone: null,
+            },
+            notes: invoice.notes,
+          }}
+          companyName={companyName}
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

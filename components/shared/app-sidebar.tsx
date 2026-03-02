@@ -133,8 +133,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const { can, role, loading } = useRole();
   // While role is loading, show all nav items so admin sees Settings once role loads
   const visibleNavItems = loading ? navItems : filterNavItems(can);
-  // Debug: remove after verifying admin sees Settings
-  console.log("Role in sidebar:", role, "can settings:", can("canAccessSettings"));
 
   async function handleLogout() {
     const supabase = createClient();

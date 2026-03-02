@@ -1,10 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Bell } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { NotificationBell } from "@/components/shared/notification-bell";
+import { GlobalSearch } from "@/components/shared/global-search";
 
 const PATH_TITLES: Record<string, string> = {
   "/overview": "Overview",
@@ -67,14 +68,9 @@ export function AppTopbar({ user }: AppTopbarProps) {
         <h1 className="text-lg font-semibold">{title}</h1>
       </div>
       <div className="flex items-center gap-2">
+        <GlobalSearch />
         <ThemeToggle />
-        <button
-          type="button"
-          className="rounded-md p-2 hover:bg-accent hover:text-accent-foreground"
-          aria-label="Notifications"
-        >
-          <Bell className="size-4" />
-        </button>
+        <NotificationBell />
         <Avatar className="size-8">
           <AvatarImage src={user?.user_metadata?.avatar_url} />
           <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>

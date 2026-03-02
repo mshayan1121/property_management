@@ -41,7 +41,7 @@ async function getBillsData() {
     };
   }
 
-  const [billsRes, propertiesRes, vendorsRes] = await Promise.all([
+  const [billsRes, propertiesRes, vendorsRes, companyRes] = await Promise.all([
     supabase
       .from("bills")
       .select("id, reference, property_id, vendor_id, category, description, amount, vat_amount, total_amount, due_date, status, notes")
@@ -55,6 +55,11 @@ async function getBillsData() {
       .from("vendors")
       .select("id, name")
       .eq("company_id", companyId),
+    supabase
+      .from("companies")
+      .select("name")
+      .eq("id", companyId)
+      .single(),
   ]);
 
   const propertiesMap = new Map(
@@ -78,6 +83,7 @@ async function getBillsData() {
     properties: propertiesRes.data ?? [],
     vendors: vendorsRes.data ?? [],
     companyId,
+    companyName: companyRes.data?.name ?? "Jetset Business",
   };
 }
 
@@ -99,7 +105,7 @@ export default async function BillsPage() {
 }
 
 async function BillsContent() {
-  const { bills, companyId, properties, vendors } = await getBillsData();
+  const { bills, companyId, companyName, properties, vendors } = await getBillsData();
 
   if (!companyId) {
     return (
@@ -115,6 +121,7 @@ async function BillsContent() {
     <BillsTable
       initialBills={bills}
       companyId={companyId}
+      companyName={companyName}
       properties={properties}
       vendors={vendors}
     />

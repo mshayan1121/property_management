@@ -38,6 +38,7 @@ import {
 import { Plus, Search, Pencil, Trash2, Banknote } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { BillForm } from "./bill-form";
+import { BillPdfButton } from "@/components/pdf/bill-pdf-button";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
@@ -69,6 +70,7 @@ interface BillRow {
 interface BillsTableProps {
   initialBills: BillRow[];
   companyId: string;
+  companyName: string;
   properties: { id: string; reference: string; name: string }[];
   vendors: { id: string; name: string }[];
 }
@@ -76,6 +78,7 @@ interface BillsTableProps {
 export function BillsTable({
   initialBills,
   companyId,
+  companyName,
   properties,
   vendors,
 }: BillsTableProps) {
@@ -266,6 +269,25 @@ export function BillsTable({
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
+                      <BillPdfButton
+                        data={{
+                          reference: b.reference,
+                          due_date: b.due_date,
+                          status: b.status,
+                          category: b.category,
+                          description: b.description,
+                          amount: b.amount,
+                          vat_amount: b.vat_amount,
+                          total_amount: b.total_amount,
+                          vendor: {
+                            name: b.vendor_name ?? "—",
+                            email: null,
+                            phone: null,
+                          },
+                          notes: b.notes,
+                        }}
+                        companyName={companyName}
+                      />
                       {b.status !== "paid" && b.status !== "cancelled" && (
                         <PermissionGate permission="canEdit">
                           <Button

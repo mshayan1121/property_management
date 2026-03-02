@@ -555,6 +555,31 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["announcements"]["Insert"]>;
       };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          message: string;
+          type: string;
+          link: string | null;
+          is_read: boolean;
+          company_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          message: string;
+          type?: string;
+          link?: string | null;
+          is_read?: boolean;
+          company_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["notifications"]["Insert"]>;
+      };
     };
   };
 }

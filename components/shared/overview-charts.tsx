@@ -19,32 +19,55 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-const revenueData = [
-  { month: "Jan", revenue: 45000 },
-  { month: "Feb", revenue: 52000 },
-  { month: "Mar", revenue: 48000 },
-  { month: "Apr", revenue: 61000 },
-  { month: "May", revenue: 55000 },
-  { month: "Jun", revenue: 67000 },
+const CHART_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
 ];
 
-const occupancyData = [
-  { name: "Occupied", value: 85, color: "var(--chart-1)" },
-  { name: "Vacant", value: 15, color: "var(--chart-2)" },
-];
+export interface RevenueExpensesDatum {
+  month: string;
+  revenue: number;
+  expenses: number;
+}
 
-export function OverviewCharts() {
+export interface DealsByStageDatum {
+  name: string;
+  value: number;
+}
+
+interface OverviewChartsProps {
+  revenueExpensesData: RevenueExpensesDatum[];
+  dealsByStageData: DealsByStageDatum[];
+}
+
+export function OverviewCharts({
+  revenueExpensesData,
+  dealsByStageData,
+}: OverviewChartsProps) {
+  const donutData = dealsByStageData.map((d, i) => ({
+    ...d,
+    color: CHART_COLORS[i % CHART_COLORS.length],
+  }));
+
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid gap-4 md:grid-cols-2" suppressHydrationWarning>
       <Card>
         <CardHeader>
-          <CardTitle>Revenue Overview</CardTitle>
-          <CardDescription>Monthly revenue (AED) — placeholder data</CardDescription>
+          <CardTitle>Revenue vs Expenses</CardTitle>
+          <CardDescription>
+            Last 6 months (AED) — payments vs bills
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={revenueData}>
+              <BarChart
+                data={revenueExpensesData}
+                margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
+              >
                 <XAxis
                   dataKey="month"
                   stroke="var(--muted-foreground)"
@@ -53,11 +76,21 @@ export function OverviewCharts() {
                 <YAxis
                   stroke="var(--muted-foreground)"
                   fontSize={12}
-                  tickFormatter={(v) => `AED ${(v / 1000).toFixed(0)}k`}
+                  tickFormatter={(v) =>
+                    v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
+                  }
                 />
+                <Legend />
                 <Bar
                   dataKey="revenue"
+                  name="Revenue"
                   fill="var(--chart-1)"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  dataKey="expenses"
+                  name="Expenses"
+                  fill="var(--chart-2)"
                   radius={[4, 4, 0, 0]}
                 />
               </BarChart>
@@ -67,32 +100,37 @@ export function OverviewCharts() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Occupancy Rate</CardTitle>
-          <CardDescription>Overall occupancy — placeholder data</CardDescription>
+          <CardTitle>Deals by Stage</CardTitle>
+          <CardDescription>Pipeline distribution</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={occupancyData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={2}
-                  dataKey="value"
-                  label={({ name, value }) =>
-                    `${name} ${value}%`
-                  }
-                >
-                  {occupancyData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            {donutData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+                No deals yet
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={donutData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="value"
+                    nameKey="name"
+                    label={({ name, value }) => `${name} ${value}`}
+                  >
+                    {donutData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </CardContent>
       </Card>

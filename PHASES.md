@@ -107,7 +107,7 @@ Status: ✅ Complete
 ---
 
 ## Phase 6.5 — Polish & Enhancements
-Status: In Progress
+Status: ✅ Complete
 
 ### Features
 - Overview dashboard with real data
@@ -115,6 +115,14 @@ Status: In Progress
 - Global search
 - Invoice PDF generation
 - Overdue auto-detection
+
+---
+
+## Phase 7 — Security Hardening
+Status: In Progress
+
+### Features
+- (TBD)
 
 ---
 
