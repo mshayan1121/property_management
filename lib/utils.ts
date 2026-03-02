@@ -22,3 +22,9 @@ export function formatDate(date: Date | string): string {
   if (!isValid(d)) return "-";
   return format(d, "dd/MM/yyyy");
 }
+
+/** Format time string (HH:mm or HH:mm:ss) to HH:mm for display. */
+export function formatTime(time: string | null): string {
+  if (!time) return "—";
+  return time.slice(0, 5);
+}

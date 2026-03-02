@@ -74,4 +74,21 @@ Completed: 01/03/2026
 - [x] Sidebar icon updated to Building2, collapses to icon only
 
 ## Phase 5 — Operations
+Status: ✅ Complete
+Completed: 01/03/2026
+
+### Completed
+- [x] Operations dashboard with stat cards and charts
+- [x] Projects management (add/edit/delete, detail page)
+- [x] Tasks management (overdue highlighting)
+- [x] Maintenance requests (generate work order)
+- [x] Work orders management
+- [x] Inventory management (low stock alerts)
+- [x] Amenity bookings (with helper text for setup)
+- [x] Announcements (publish workflow)
+- [x] 4 Operations reports
+- [x] Fixed sidebar hydration error
+- [x] Fixed amenity bookings hydration error
+
+## Phase 6 — Roles & Access Control
 Status: In Progress

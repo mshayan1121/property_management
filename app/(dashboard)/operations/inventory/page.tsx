@@ -1,25 +1,22 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ProjectsTable } from "@/components/operations/projects-table";
+import { InventoryTable } from "@/components/operations/inventory-table";
 
-type ProjectRow = {
+type InventoryRow = {
   id: string;
-  reference: string;
   name: string;
   description: string | null;
+  category: string | null;
   property_id: string | null;
   property_name: string | null;
-  category: string | null;
-  priority: string;
+  quantity: number;
+  unit: string;
+  minimum_quantity: number;
   status: string;
-  start_date: string | null;
-  due_date: string | null;
-  budget: number;
-  assigned_to: string | null;
 };
 
-async function getProjectsData() {
+async function getInventoryData() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -33,26 +30,21 @@ async function getProjectsData() {
   const companyId = profile?.company_id;
   if (!companyId) {
     return {
-      projects: [] as ProjectRow[],
+      items: [] as InventoryRow[],
       properties: [] as { id: string; reference: string; name: string }[],
-      profiles: [] as { id: string; full_name: string }[],
       companyId: "",
     };
   }
 
-  const [projectsRes, propertiesRes, profilesRes] = await Promise.all([
+  const [itemsRes, propertiesRes] = await Promise.all([
     supabase
-      .from("projects")
-      .select("id, reference, name, description, property_id, category, priority, status, start_date, due_date, budget, assigned_to")
+      .from("inventory_items")
+      .select("id, name, description, category, property_id, quantity, unit, minimum_quantity, status")
       .eq("company_id", companyId)
-      .order("created_at", { ascending: false }),
+      .order("name"),
     supabase
       .from("properties")
       .select("id, reference, name")
-      .eq("company_id", companyId),
-    supabase
-      .from("profiles")
-      .select("id, full_name")
       .eq("company_id", companyId),
   ]);
 
@@ -60,21 +52,21 @@ async function getProjectsData() {
     (propertiesRes.data ?? []).map((p) => [p.id, p.name])
   );
 
-  const projects: ProjectRow[] = (projectsRes.data ?? []).map((p) => ({
-    ...p,
-    budget: Number(p.budget),
-    property_name: p.property_id ? propertiesMap.get(p.property_id) ?? null : null,
+  const items: InventoryRow[] = (itemsRes.data ?? []).map((i) => ({
+    ...i,
+    quantity: Number(i.quantity),
+    minimum_quantity: Number(i.minimum_quantity),
+    property_name: i.property_id ? propertiesMap.get(i.property_id) ?? null : null,
   }));
 
   return {
-    projects,
+    items,
     properties: propertiesRes.data ?? [],
-    profiles: profilesRes.data ?? [],
     companyId,
   };
 }
 
-function ProjectsTableSkeleton() {
+function InventoryTableSkeleton() {
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
@@ -86,42 +78,41 @@ function ProjectsTableSkeleton() {
   );
 }
 
-export default async function ProjectsPage() {
+export default async function InventoryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Projects</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Inventory</h2>
         <p className="text-muted-foreground">
-          Manage operations projects and track progress
+          Track inventory items and stock levels
         </p>
       </div>
 
-      <Suspense fallback={<ProjectsTableSkeleton />}>
-        <ProjectsContent />
+      <Suspense fallback={<InventoryTableSkeleton />}>
+        <InventoryContent />
       </Suspense>
     </div>
   );
 }
 
-async function ProjectsContent() {
-  const { projects, companyId, properties, profiles } = await getProjectsData();
+async function InventoryContent() {
+  const { items, companyId, properties } = await getInventoryData();
 
   if (!companyId) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12 text-center">
         <p className="text-muted-foreground text-sm">
-          You need to be assigned to a company to manage projects.
+          You need to be assigned to a company to manage inventory.
         </p>
       </div>
     );
   }
 
   return (
-    <ProjectsTable
-      initialProjects={projects}
+    <InventoryTable
+      initialItems={items}
       companyId={companyId}
       properties={properties}
-      profiles={profiles}
     />
   );
 }

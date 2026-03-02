@@ -1,25 +1,20 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ProjectsTable } from "@/components/operations/projects-table";
+import { AnnouncementsTable } from "@/components/operations/announcements-table";
 
-type ProjectRow = {
+type AnnouncementRow = {
   id: string;
-  reference: string;
-  name: string;
-  description: string | null;
+  title: string;
+  content: string;
+  type: string;
   property_id: string | null;
   property_name: string | null;
-  category: string | null;
-  priority: string;
   status: string;
-  start_date: string | null;
-  due_date: string | null;
-  budget: number;
-  assigned_to: string | null;
+  published_at: string | null;
 };
 
-async function getProjectsData() {
+async function getAnnouncementsData() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -33,26 +28,21 @@ async function getProjectsData() {
   const companyId = profile?.company_id;
   if (!companyId) {
     return {
-      projects: [] as ProjectRow[],
+      announcements: [] as AnnouncementRow[],
       properties: [] as { id: string; reference: string; name: string }[],
-      profiles: [] as { id: string; full_name: string }[],
       companyId: "",
     };
   }
 
-  const [projectsRes, propertiesRes, profilesRes] = await Promise.all([
+  const [announcementsRes, propertiesRes] = await Promise.all([
     supabase
-      .from("projects")
-      .select("id, reference, name, description, property_id, category, priority, status, start_date, due_date, budget, assigned_to")
+      .from("announcements")
+      .select("id, title, content, type, property_id, status, published_at")
       .eq("company_id", companyId)
       .order("created_at", { ascending: false }),
     supabase
       .from("properties")
       .select("id, reference, name")
-      .eq("company_id", companyId),
-    supabase
-      .from("profiles")
-      .select("id, full_name")
       .eq("company_id", companyId),
   ]);
 
@@ -60,21 +50,21 @@ async function getProjectsData() {
     (propertiesRes.data ?? []).map((p) => [p.id, p.name])
   );
 
-  const projects: ProjectRow[] = (projectsRes.data ?? []).map((p) => ({
-    ...p,
-    budget: Number(p.budget),
-    property_name: p.property_id ? propertiesMap.get(p.property_id) ?? null : null,
-  }));
+  const announcements: AnnouncementRow[] = (announcementsRes.data ?? []).map(
+    (a) => ({
+      ...a,
+      property_name: a.property_id ? propertiesMap.get(a.property_id) ?? null : null,
+    })
+  );
 
   return {
-    projects,
+    announcements,
     properties: propertiesRes.data ?? [],
-    profiles: profilesRes.data ?? [],
     companyId,
   };
 }
 
-function ProjectsTableSkeleton() {
+function AnnouncementsTableSkeleton() {
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
@@ -86,42 +76,42 @@ function ProjectsTableSkeleton() {
   );
 }
 
-export default async function ProjectsPage() {
+export default async function AnnouncementsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Projects</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Announcements</h2>
         <p className="text-muted-foreground">
-          Manage operations projects and track progress
+          Create and manage company announcements
         </p>
       </div>
 
-      <Suspense fallback={<ProjectsTableSkeleton />}>
-        <ProjectsContent />
+      <Suspense fallback={<AnnouncementsTableSkeleton />}>
+        <AnnouncementsContent />
       </Suspense>
     </div>
   );
 }
 
-async function ProjectsContent() {
-  const { projects, companyId, properties, profiles } = await getProjectsData();
+async function AnnouncementsContent() {
+  const { announcements, companyId, properties } =
+    await getAnnouncementsData();
 
   if (!companyId) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12 text-center">
         <p className="text-muted-foreground text-sm">
-          You need to be assigned to a company to manage projects.
+          You need to be assigned to a company to manage announcements.
         </p>
       </div>
     );
   }
 
   return (
-    <ProjectsTable
-      initialProjects={projects}
+    <AnnouncementsTable
+      initialAnnouncements={announcements}
       companyId={companyId}
       properties={properties}
-      profiles={profiles}
     />
   );
 }

@@ -17,12 +17,14 @@ export default async function DashboardLayout({
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar user={data.user} />
-      <SidebarInset>
-        <AppTopbar user={data.user} />
-        <div className="flex-1 p-4 md:p-6">{children}</div>
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="flex h-screen" suppressHydrationWarning>
+      <SidebarProvider>
+        <AppSidebar user={data.user} />
+        <SidebarInset>
+          <AppTopbar user={data.user} />
+          <div className="flex-1 p-4 md:p-6">{children}</div>
+        </SidebarInset>
+      </SidebarProvider>
+    </div>
   );
 }

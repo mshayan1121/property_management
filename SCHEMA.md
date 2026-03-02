@@ -234,8 +234,113 @@ RLS enabled on all Phase 3 tables. Company-based policies: users only see their 
 
 RLS enabled on all Phase 4 tables. Company-based policies: users only see their company's data.
 
-## Phase 5 Tables (HR & Payroll)
-Out of scope — handled externally via Zoho.
+## Phase 5 Tables (Operations)
 
-## Phase 6 Tables (Operations)
-To be added after Phase 5 is complete.
+### projects
+- id: uuid PK
+- reference: text unique (PROJ-000001)
+- name: text not null
+- description: text nullable
+- property_id: uuid FK properties nullable
+- category: text (maintenance/renovation/inspection/construction/other)
+- status: text (pending/in_progress/completed/cancelled)
+- priority: text (low/medium/high/urgent) default medium
+- start_date: date nullable
+- due_date: date nullable
+- budget: numeric(12,2) default 0
+- assigned_to: uuid FK profiles nullable
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
+
+### tasks
+- id: uuid PK
+- reference: text unique (TASK-000001)
+- title: text not null
+- description: text nullable
+- project_id: uuid FK projects nullable
+- assigned_to: uuid FK profiles nullable
+- priority: text (low/medium/high/urgent) default medium
+- status: text (todo/in_progress/completed/cancelled) default todo
+- due_date: date nullable
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
+
+### maintenance_requests
+- id: uuid PK
+- reference: text unique (MR-000001)
+- unit_id: uuid FK units nullable
+- property_id: uuid FK properties nullable
+- tenant_id: uuid FK tenants nullable
+- title: text not null
+- description: text nullable
+- category: text (plumbing/electrical/hvac/structural/appliance/cleaning/other)
+- priority: text (low/medium/high/urgent) default medium
+- status: text (open/assigned/in_progress/completed/cancelled) default open
+- assigned_to: uuid FK profiles nullable
+- estimated_cost: numeric(12,2) default 0
+- actual_cost: numeric(12,2) default 0
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
+
+### work_orders
+- id: uuid PK
+- reference: text unique (WO-000001)
+- maintenance_request_id: uuid FK maintenance_requests nullable
+- title: text not null
+- description: text nullable
+- vendor_id: uuid FK vendors nullable
+- assigned_to: uuid FK profiles nullable
+- status: text (pending/in_progress/completed/cancelled) default pending
+- scheduled_date: date nullable
+- completed_date: date nullable
+- estimated_cost: numeric(12,2) default 0
+- actual_cost: numeric(12,2) default 0
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
+
+### inventory_items
+- id: uuid PK
+- name: text not null
+- description: text nullable
+- category: text (furniture/appliance/equipment/supplies/other)
+- property_id: uuid FK properties nullable
+- quantity: integer default 0
+- unit: text default pieces
+- minimum_quantity: integer default 0
+- status: text (available/low_stock/out_of_stock) default available
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
+
+### amenity_bookings
+- id: uuid PK
+- reference: text unique (BK-000001)
+- amenity_id: uuid FK amenities nullable
+- tenant_id: uuid FK tenants nullable
+- booking_date: date not null
+- start_time: time not null
+- end_time: time not null
+- status: text (pending/confirmed/cancelled) default pending
+- notes: text nullable
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
+
+### announcements
+- id: uuid PK
+- title: text not null
+- content: text not null
+- type: text (general/maintenance/emergency/event) default general
+- property_id: uuid FK properties nullable
+- published_at: timestamptz nullable
+- status: text (draft/published/archived) default draft
+- created_by: uuid FK profiles nullable
+- company_id: uuid FK companies
+- created_at: timestamptz
+- updated_at: timestamptz
+
+RLS enabled on all Phase 5 tables. Company-based policies: users only see their company's data.

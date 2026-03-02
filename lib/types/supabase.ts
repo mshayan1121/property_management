@@ -381,6 +381,174 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["vendors"]["Insert"]>;
       };
+      projects: {
+        Row: {
+          id: string;
+          reference: string;
+          name: string;
+          description: string | null;
+          property_id: string | null;
+          category: string | null;
+          status: string;
+          priority: string;
+          start_date: string | null;
+          due_date: string | null;
+          budget: number;
+          assigned_to: string | null;
+          company_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["projects"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          reference?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["projects"]["Insert"]>;
+      };
+      tasks: {
+        Row: {
+          id: string;
+          reference: string;
+          title: string;
+          description: string | null;
+          project_id: string | null;
+          assigned_to: string | null;
+          priority: string;
+          status: string;
+          due_date: string | null;
+          company_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["tasks"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          reference?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tasks"]["Insert"]>;
+      };
+      maintenance_requests: {
+        Row: {
+          id: string;
+          reference: string;
+          unit_id: string | null;
+          property_id: string | null;
+          tenant_id: string | null;
+          title: string;
+          description: string | null;
+          category: string | null;
+          priority: string;
+          status: string;
+          assigned_to: string | null;
+          estimated_cost: number;
+          actual_cost: number;
+          company_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["maintenance_requests"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          reference?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["maintenance_requests"]["Insert"]>;
+      };
+      work_orders: {
+        Row: {
+          id: string;
+          reference: string;
+          maintenance_request_id: string | null;
+          title: string;
+          description: string | null;
+          vendor_id: string | null;
+          assigned_to: string | null;
+          status: string;
+          scheduled_date: string | null;
+          completed_date: string | null;
+          estimated_cost: number;
+          actual_cost: number;
+          company_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["work_orders"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          reference?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["work_orders"]["Insert"]>;
+      };
+      inventory_items: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          category: string | null;
+          property_id: string | null;
+          quantity: number;
+          unit: string;
+          minimum_quantity: number;
+          status: string;
+          company_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["inventory_items"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["inventory_items"]["Insert"]>;
+      };
+      amenity_bookings: {
+        Row: {
+          id: string;
+          reference: string;
+          amenity_id: string | null;
+          tenant_id: string | null;
+          booking_date: string;
+          start_time: string;
+          end_time: string;
+          status: string;
+          notes: string | null;
+          company_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["amenity_bookings"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          reference?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["amenity_bookings"]["Insert"]>;
+      };
+      announcements: {
+        Row: {
+          id: string;
+          title: string;
+          content: string;
+          type: string;
+          property_id: string | null;
+          published_at: string | null;
+          status: string;
+          created_by: string | null;
+          company_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["announcements"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["announcements"]["Insert"]>;
+      };
     };
   };
 }

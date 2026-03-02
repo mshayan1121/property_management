@@ -73,7 +73,7 @@ Status: ✅ Complete
 ---
 
 ## Phase 5 — Operations
-Status: In Progress
+Status: ✅ Complete
 
 ### Features
 - Projects (linked to properties, status, categories)
@@ -88,6 +88,14 @@ Status: In Progress
   - Projects by category
   - Task completion rates
   - Maintenance analytics
+
+---
+
+## Phase 6 — Roles & Access Control
+Status: In Progress
+
+### Features
+- (To be defined)
 
 ---
 

@@ -94,9 +94,15 @@ const navItems = [
     title: "Operations",
     icon: Wrench,
     items: [
+      { title: "Dashboard", href: "/operations" },
       { title: "Projects", href: "/operations/projects" },
       { title: "Tasks", href: "/operations/tasks" },
       { title: "Maintenance", href: "/operations/maintenance" },
+      { title: "Work Orders", href: "/operations/work-orders" },
+      { title: "Inventory", href: "/operations/inventory" },
+      { title: "Amenity Bookings", href: "/operations/amenity-bookings" },
+      { title: "Announcements", href: "/operations/announcements" },
+      { title: "Reports", href: "/operations/reports" },
     ],
   },
   {
@@ -123,7 +129,8 @@ export function AppSidebar({ user }: AppSidebarProps) {
     "User";
 
   return (
-    <Sidebar collapsible="icon">
+    <div suppressHydrationWarning>
+      <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
@@ -240,5 +247,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
+    </div>
   );
 }
