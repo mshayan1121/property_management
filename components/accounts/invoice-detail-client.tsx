@@ -28,6 +28,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { PermissionGate } from "@/components/shared/permission-gate";
 import { Banknote, FileCheck } from "lucide-react";
 import { AddPaymentForm } from "./add-payment-form";
 
@@ -100,10 +101,12 @@ export function InvoiceDetailClient({
             <CardDescription>Payments received for this invoice</CardDescription>
           </div>
           {status !== "paid" && status !== "cancelled" && (
-            <Button onClick={() => setAddPaymentOpen(true)} size="sm">
-              <Banknote className="mr-2 size-4" />
-              Add payment
-            </Button>
+            <PermissionGate permission="canCreate">
+              <Button onClick={() => setAddPaymentOpen(true)} size="sm">
+                <Banknote className="mr-2 size-4" />
+                Add payment
+              </Button>
+            </PermissionGate>
           )}
         </CardHeader>
         <CardContent className="space-y-4">

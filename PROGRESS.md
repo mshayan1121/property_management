@@ -91,4 +91,29 @@ Completed: 01/03/2026
 - [x] Fixed amenity bookings hydration error
 
 ## Phase 6 — Roles & Access Control
+Status: ✅ Complete
+Completed: 03/03/2026
+
+### Completed
+- [x] Role helper (lib/roles.ts)
+- [x] useRole hook
+- [x] Middleware route protection by role
+- [x] Unauthorized page
+- [x] Role-based sidebar visibility
+- [x] PermissionGate component
+- [x] Applied PermissionGate across all modules
+- [x] User management page (admin only)
+- [x] Invite user with default password
+- [x] Force password change on first login
+- [x] Fixed profiles RLS infinite recursion
+- [x] must_change_password column added
+
+## Phase 6.5 — Polish & Enhancements
 Status: In Progress
+
+### Pending
+- [ ] Overview dashboard with real data
+- [ ] Notifications system
+- [ ] Global search
+- [ ] Invoice PDF generation
+- [ ] Overdue auto-detection

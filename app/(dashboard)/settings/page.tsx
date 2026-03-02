@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import {
   Card,
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Users } from "lucide-react";
 
 const profileSchema = z.object({
   fullName: z.string().min(1, "Full name is required"),
@@ -61,6 +63,22 @@ export default function SettingsPage() {
   const [companySuccess, setCompanySuccess] = useState(false);
 
   const supabase = createClient();
+  const [canManageUsers, setCanManageUsers] = useState(false);
+
+  useEffect(() => {
+    const client = createClient();
+    async function checkAdmin() {
+      const { data: userData } = await client.auth.getUser();
+      if (!userData.user) return;
+      const { data: profile } = await client
+        .from("profiles")
+        .select("role")
+        .eq("id", userData.user.id)
+        .single();
+      setCanManageUsers(profile?.role === "admin");
+    }
+    checkAdmin();
+  }, []);
 
   const profileForm = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
@@ -281,6 +299,25 @@ export default function SettingsPage() {
           </form>
         </CardContent>
       </Card>
+
+      {canManageUsers && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="size-5" />
+              Users & Roles
+            </CardTitle>
+            <CardDescription>
+              Manage team members, roles, and send invites (Admin only)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/settings/users">Manage users</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

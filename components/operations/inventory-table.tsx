@@ -39,6 +39,7 @@ import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { InventoryForm } from "./inventory-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { PermissionGate } from "@/components/shared/permission-gate";
 
 const STATUS_COLORS: Record<string, string> = {
   available: "bg-green-500/10 text-green-600 dark:text-green-400",
@@ -164,10 +165,12 @@ export function InventoryTable({
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="mr-2 size-4" />
-          Add Item
-        </Button>
+        <PermissionGate permission="canCreate">
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="mr-2 size-4" />
+            Add Item
+          </Button>
+        </PermissionGate>
       </div>
 
       <div className="rounded-md border">
@@ -179,14 +182,16 @@ export function InventoryTable({
                 : "No items match your filters."}
             </p>
             {items.length === 0 && (
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => setAddOpen(true)}
-              >
-                <Plus className="mr-2 size-4" />
-                Add Item
-              </Button>
+              <PermissionGate permission="canCreate">
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setAddOpen(true)}
+                >
+                  <Plus className="mr-2 size-4" />
+                  Add Item
+                </Button>
+              </PermissionGate>
             )}
           </div>
         ) : (
@@ -230,22 +235,26 @@ export function InventoryTable({
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        onClick={() => setEditItem(i)}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteItem(i)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      <PermissionGate permission="canEdit">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          onClick={() => setEditItem(i)}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                      </PermissionGate>
+                      <PermissionGate permission="canDelete">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteItem(i)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </PermissionGate>
                     </div>
                   </TableCell>
                 </TableRow>

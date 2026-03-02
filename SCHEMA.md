@@ -13,6 +13,7 @@ Being built phase by phase. Updated after each phase is complete.
 | avatar_url | text | nullable |
 | role | text | admin, manager, agent, viewer |
 | company_id | uuid | FK to companies |
+| status | text | active, inactive (default: active) |
 | created_at | timestamptz | |
 | updated_at | timestamptz | |
 

@@ -30,6 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Search } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { DealForm } from "./deal-form";
+import { PermissionGate } from "@/components/shared/permission-gate";
 
 interface Deal {
   id: string;
@@ -129,10 +130,12 @@ export function DealsList({
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="mr-2 size-4" />
-          Add Deal
-        </Button>
+        <PermissionGate permission="canCreate">
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="mr-2 size-4" />
+            Add Deal
+          </Button>
+        </PermissionGate>
       </div>
 
       <div className="rounded-md border">
@@ -144,14 +147,16 @@ export function DealsList({
                 : "No deals match your filters."}
             </p>
             {initialDeals.length === 0 && (
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => setAddOpen(true)}
-              >
-                <Plus className="mr-2 size-4" />
-                Add Deal
-              </Button>
+              <PermissionGate permission="canCreate">
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setAddOpen(true)}
+                >
+                  <Plus className="mr-2 size-4" />
+                  Add Deal
+                </Button>
+              </PermissionGate>
             )}
           </div>
         ) : (

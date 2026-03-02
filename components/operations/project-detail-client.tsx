@@ -35,6 +35,7 @@ import { TaskForm } from "./task-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { parseISO, isBefore } from "date-fns";
+import { PermissionGate } from "@/components/shared/permission-gate";
 
 const PRIORITY_COLORS: Record<string, string> = {
   low: "bg-muted text-muted-foreground",
@@ -108,23 +109,27 @@ export function ProjectDetailClient({
       <Card className="rounded-lg border">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Tasks</CardTitle>
-          <Button onClick={() => setAddOpen(true)}>
-            <Plus className="mr-2 size-4" />
-            Add task
-          </Button>
+          <PermissionGate permission="canCreate">
+            <Button onClick={() => setAddOpen(true)}>
+              <Plus className="mr-2 size-4" />
+              Add task
+            </Button>
+          </PermissionGate>
         </CardHeader>
         <CardContent>
           {tasks.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12 text-center">
               <p className="text-muted-foreground text-sm">No tasks yet</p>
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => setAddOpen(true)}
-              >
-                <Plus className="mr-2 size-4" />
-                Add task
-              </Button>
+              <PermissionGate permission="canCreate">
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setAddOpen(true)}
+                >
+                  <Plus className="mr-2 size-4" />
+                  Add task
+                </Button>
+              </PermissionGate>
             </div>
           ) : (
             <Table>
@@ -183,22 +188,26 @@ export function ProjectDetailClient({
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8"
-                          onClick={() => setEditTask(t)}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8 text-destructive hover:text-destructive"
-                          onClick={() => setDeleteTask(t)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        <PermissionGate permission="canEdit">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            onClick={() => setEditTask(t)}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                        </PermissionGate>
+                        <PermissionGate permission="canDelete">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-destructive hover:text-destructive"
+                            onClick={() => setDeleteTask(t)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </PermissionGate>
                       </div>
                     </TableCell>
                   </TableRow>

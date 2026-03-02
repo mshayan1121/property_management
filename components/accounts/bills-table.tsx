@@ -40,6 +40,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { BillForm } from "./bill-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { PermissionGate } from "@/components/shared/permission-gate";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
@@ -186,10 +187,12 @@ export function BillsTable({
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="mr-2 size-4" />
-          Add Bill
-        </Button>
+        <PermissionGate permission="canCreate">
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="mr-2 size-4" />
+            Add Bill
+          </Button>
+        </PermissionGate>
       </div>
 
       <div className="rounded-md border">
@@ -201,14 +204,16 @@ export function BillsTable({
                 : "No bills match your filters."}
             </p>
             {bills.length === 0 && (
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => setAddOpen(true)}
-              >
-                <Plus className="mr-2 size-4" />
-                Add Bill
-              </Button>
+              <PermissionGate permission="canCreate">
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setAddOpen(true)}
+                >
+                  <Plus className="mr-2 size-4" />
+                  Add Bill
+                </Button>
+              </PermissionGate>
             )}
           </div>
         ) : (
@@ -262,32 +267,38 @@ export function BillsTable({
                   <TableCell>
                     <div className="flex gap-2">
                       {b.status !== "paid" && b.status !== "cancelled" && (
+                        <PermissionGate permission="canEdit">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            onClick={() => handleMarkAsPaid(b)}
+                            title="Mark as paid"
+                          >
+                            <Banknote className="size-4" />
+                          </Button>
+                        </PermissionGate>
+                      )}
+                      <PermissionGate permission="canEdit">
                         <Button
                           variant="ghost"
                           size="icon"
                           className="size-8"
-                          onClick={() => handleMarkAsPaid(b)}
-                          title="Mark as paid"
+                          onClick={() => setEditBill(b)}
                         >
-                          <Banknote className="size-4" />
+                          <Pencil className="size-4" />
                         </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        onClick={() => setEditBill(b)}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteBill(b)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      </PermissionGate>
+                      <PermissionGate permission="canDelete">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteBill(b)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </PermissionGate>
                     </div>
                   </TableCell>
                 </TableRow>

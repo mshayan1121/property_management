@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { DealForm } from "./deal-form";
+import { PermissionGate } from "@/components/shared/permission-gate";
 import {
   Sheet,
   SheetContent,
@@ -130,10 +131,12 @@ export function DealsKanban({
   return (
     <>
       <div className="mb-4 flex justify-end">
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="mr-2 size-4" />
-          Add Deal
-        </Button>
+        <PermissionGate permission="canCreate">
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="mr-2 size-4" />
+            Add Deal
+          </Button>
+        </PermissionGate>
       </div>
 
       <DndContext

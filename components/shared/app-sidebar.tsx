@@ -32,7 +32,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,6 +40,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useRole } from "@/hooks/use-role";
 
 interface AppSidebarProps {
   user?: {
@@ -109,12 +109,32 @@ const navItems = [
     title: "Settings",
     href: "/settings",
     icon: Settings,
+    permission: "canAccessSettings" as const,
   },
 ];
+
+function filterNavItems(
+  can: (p: "canAccessSettings" | "canAccessCRM" | "canAccessProperties" | "canAccessAccounts" | "canAccessOperations") => boolean
+) {
+  return navItems.filter((item) => {
+    if (item.title === "Overview") return true;
+    if ("permission" in item) return can(item.permission);
+    if (item.title === "CRM") return can("canAccessCRM");
+    if (item.title === "Properties") return can("canAccessProperties");
+    if (item.title === "Accounts") return can("canAccessAccounts");
+    if (item.title === "Operations") return can("canAccessOperations");
+    return true;
+  });
+}
 
 export function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { can, role, loading } = useRole();
+  // While role is loading, show all nav items so admin sees Settings once role loads
+  const visibleNavItems = loading ? navItems : filterNavItems(can);
+  // Debug: remove after verifying admin sees Settings
+  console.log("Role in sidebar:", role, "can settings:", can("canAccessSettings"));
 
   async function handleLogout() {
     const supabase = createClient();
@@ -152,7 +172,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) =>
+              {visibleNavItems.map((item) =>
                 item.items ? (
                   <Collapsible
                     key={item.title}

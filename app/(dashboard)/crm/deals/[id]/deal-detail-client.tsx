@@ -27,6 +27,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useState, useRef } from "react";
 import Link from "next/link";
+import { PermissionGate } from "@/components/shared/permission-gate";
 
 interface DealDetailClientProps {
   deal: {
@@ -278,20 +279,23 @@ export function DealDetailClient({
               <p className="text-muted-foreground">None</p>
             )}
           </div>
-          <Button
-            className="w-full"
-            onClick={handleGenerateContract}
-          >
-            <FileText className="mr-2 size-4" />
-            Generate Contract
-          </Button>
+          <PermissionGate permission="canCreate">
+            <Button
+              className="w-full"
+              onClick={handleGenerateContract}
+            >
+              <FileText className="mr-2 size-4" />
+              Generate Contract
+            </Button>
+          </PermissionGate>
         </CardContent>
       </Card>
 
       <Card className="lg:col-span-2">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>KYC Documents</CardTitle>
-          <div className="flex gap-2">
+          <PermissionGate permission="canCreate">
+            <div className="flex gap-2">
             <input
               ref={fileInputRef}
               type="file"
@@ -310,6 +314,7 @@ export function DealDetailClient({
               {uploading ? "Uploading..." : "Upload"}
             </Button>
           </div>
+          </PermissionGate>
         </CardHeader>
         <CardContent>
           {kycDocuments.length === 0 ? (
@@ -318,15 +323,17 @@ export function DealDetailClient({
               <p className="text-muted-foreground text-sm">
                 No KYC documents uploaded
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-              >
-                Upload document
-              </Button>
+              <PermissionGate permission="canCreate">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  Upload document
+                </Button>
+              </PermissionGate>
             </div>
           ) : (
             <ul className="space-y-2">
@@ -362,14 +369,16 @@ export function DealDetailClient({
                         <ExternalLink className="size-4" />
                       </a>
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 text-destructive hover:text-destructive"
-                      onClick={() => setDeleteDocId(doc.id)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+                    <PermissionGate permission="canDelete">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteDocId(doc.id)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </PermissionGate>
                   </div>
                 </li>
               ))}

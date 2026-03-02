@@ -41,6 +41,7 @@ import { formatDate } from "@/lib/utils";
 import { ContactForm } from "./contact-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { PermissionGate } from "@/components/shared/permission-gate";
 
 interface Contact {
   id: string;
@@ -125,10 +126,12 @@ export function ContactsTable({
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="mr-2 size-4" />
-          Add Contact
-        </Button>
+        <PermissionGate permission="canCreate">
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="mr-2 size-4" />
+            Add Contact
+          </Button>
+        </PermissionGate>
       </div>
 
       <div className="rounded-md border">
@@ -140,14 +143,16 @@ export function ContactsTable({
                 : "No contacts match your filters."}
             </p>
             {contacts.length === 0 && (
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => setAddOpen(true)}
-              >
-                <Plus className="mr-2 size-4" />
-                Add Contact
-              </Button>
+              <PermissionGate permission="canCreate">
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setAddOpen(true)}
+                >
+                  <Plus className="mr-2 size-4" />
+                  Add Contact
+                </Button>
+              </PermissionGate>
             )}
           </div>
         ) : (
@@ -182,22 +187,26 @@ export function ContactsTable({
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        onClick={() => setEditContact(contact)}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteContact(contact)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      <PermissionGate permission="canEdit">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          onClick={() => setEditContact(contact)}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                      </PermissionGate>
+                      <PermissionGate permission="canDelete">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteContact(contact)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </PermissionGate>
                     </div>
                   </TableCell>
                 </TableRow>

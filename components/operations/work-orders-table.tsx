@@ -40,6 +40,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { WorkOrderForm } from "./work-order-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { PermissionGate } from "@/components/shared/permission-gate";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-muted text-muted-foreground",
@@ -155,10 +156,12 @@ export function WorkOrdersTable({
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="mr-2 size-4" />
-          Add Work Order
-        </Button>
+        <PermissionGate permission="canCreate">
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="mr-2 size-4" />
+            Add Work Order
+          </Button>
+        </PermissionGate>
       </div>
 
       <div className="rounded-md border">
@@ -170,14 +173,16 @@ export function WorkOrdersTable({
                 : "No work orders match your filters."}
             </p>
             {workOrders.length === 0 && (
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => setAddOpen(true)}
-              >
-                <Plus className="mr-2 size-4" />
-                Add Work Order
-              </Button>
+              <PermissionGate permission="canCreate">
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setAddOpen(true)}
+                >
+                  <Plus className="mr-2 size-4" />
+                  Add Work Order
+                </Button>
+              </PermissionGate>
             )}
           </div>
         ) : (
@@ -226,22 +231,26 @@ export function WorkOrdersTable({
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        onClick={() => setEditWO(w)}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteWO(w)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      <PermissionGate permission="canEdit">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          onClick={() => setEditWO(w)}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                      </PermissionGate>
+                      <PermissionGate permission="canDelete">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteWO(w)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </PermissionGate>
                     </div>
                   </TableCell>
                 </TableRow>

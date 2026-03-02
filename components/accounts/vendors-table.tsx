@@ -39,6 +39,7 @@ import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { VendorForm } from "./vendor-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { PermissionGate } from "@/components/shared/permission-gate";
 
 interface VendorRow {
   id: string;
@@ -136,10 +137,12 @@ export function VendorsTable({
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="mr-2 size-4" />
-          Add Vendor
-        </Button>
+        <PermissionGate permission="canCreate">
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="mr-2 size-4" />
+            Add Vendor
+          </Button>
+        </PermissionGate>
       </div>
 
       <div className="rounded-md border">
@@ -151,14 +154,16 @@ export function VendorsTable({
                 : "No vendors match your filters."}
             </p>
             {vendors.length === 0 && (
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => setAddOpen(true)}
-              >
-                <Plus className="mr-2 size-4" />
-                Add Vendor
-              </Button>
+              <PermissionGate permission="canCreate">
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setAddOpen(true)}
+                >
+                  <Plus className="mr-2 size-4" />
+                  Add Vendor
+                </Button>
+              </PermissionGate>
             )}
           </div>
         ) : (
@@ -203,22 +208,26 @@ export function VendorsTable({
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        onClick={() => setEditVendor(v)}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteVendor(v)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      <PermissionGate permission="canEdit">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          onClick={() => setEditVendor(v)}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                      </PermissionGate>
+                      <PermissionGate permission="canDelete">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteVendor(v)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </PermissionGate>
                     </div>
                   </TableCell>
                 </TableRow>

@@ -92,10 +92,29 @@ Status: ✅ Complete
 ---
 
 ## Phase 6 — Roles & Access Control
+Status: ✅ Complete
+
+### Features
+- Role-based middleware (route protection by role)
+- Role-based sidebar (hide sections by permission)
+- PermissionGate for add/edit/delete buttons (CRM, Properties, Accounts, Operations)
+- User management page (Admin only): table, change role, deactivate/reactivate, invite
+- Unauthorized page
+- lib/roles.ts, hooks/use-role.ts
+- DB: profiles.status, must_change_password, RLS (fixed recursion), first-user = admin trigger
+- Invite user with default password; force password change on first login
+
+---
+
+## Phase 6.5 — Polish & Enhancements
 Status: In Progress
 
 ### Features
-- (To be defined)
+- Overview dashboard with real data
+- Notifications system
+- Global search
+- Invoice PDF generation
+- Overdue auto-detection
 
 ---
 

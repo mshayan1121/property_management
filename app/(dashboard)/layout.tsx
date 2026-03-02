@@ -16,8 +16,18 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("must_change_password")
+    .eq("id", data.user.id)
+    .single();
+
+  if (profile?.must_change_password) {
+    redirect("/auth/change-password");
+  }
+
   return (
-    <div className="flex h-screen" suppressHydrationWarning>
+    <div className="flex h-screen" suppressHydrationWarning={true}>
       <SidebarProvider>
         <AppSidebar user={data.user} />
         <SidebarInset>

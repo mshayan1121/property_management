@@ -28,6 +28,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
+import { PermissionGate } from "@/components/shared/permission-gate";
 
 type UnitRow = {
   id: string;
@@ -243,10 +244,12 @@ export function PropertyDetailClient({
             onChange={(e) => setAmenityDesc(e.target.value)}
             className="max-w-[240px]"
           />
-          <Button onClick={handleAddAmenity} size="sm">
-            <Plus className="mr-2 size-4" />
-            Add
-          </Button>
+          <PermissionGate permission="canCreate">
+            <Button onClick={handleAddAmenity} size="sm">
+              <Plus className="mr-2 size-4" />
+              Add
+            </Button>
+          </PermissionGate>
         </div>
         <div className="rounded-md border">
           {amenities.length === 0 ? (
@@ -268,14 +271,16 @@ export function PropertyDetailClient({
                     <TableCell className="font-medium">{a.name}</TableCell>
                     <TableCell className="text-muted-foreground">{a.description ?? "-"}</TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteAmenity(a)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      <PermissionGate permission="canDelete">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteAmenity(a)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </PermissionGate>
                     </TableCell>
                   </TableRow>
                 ))}
