@@ -68,12 +68,12 @@ function LoginForm() {
 
   return (
     <Card className="w-full max-w-md">
-      <CardHeader>
+      <CardHeader className="px-8">
         <CardTitle>Sign in</CardTitle>
         <CardDescription>Enter your email and password</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-8">
           {successMessage && (
             <div
               className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground"
@@ -126,7 +126,7 @@ function LoginForm() {
             )}
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col gap-4">
+        <CardFooter className="flex flex-col gap-4 px-8 pt-6">
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? "Signing in…" : "Sign in"}
           </Button>
