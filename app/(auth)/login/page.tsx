@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { checkLoginRateLimit } from "@/app/(auth)/login/actions";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("registered") === "true") {
@@ -42,28 +44,48 @@ function LoginForm() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   });
 
   async function onSubmit(data: LoginForm) {
     setError(null);
+    setIsLoading(true);
+
     const { allowed } = await checkLoginRateLimit();
     if (!allowed) {
       setError("Too many attempts, please wait a minute and try again.");
+      setIsLoading(false);
       return;
     }
+
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword(data);
+    const timeoutMs = 10000;
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("TIMEOUT")), timeoutMs)
+    );
 
-    if (error) {
-      setError(error.message);
-      return;
+    try {
+      const result = await Promise.race([
+        supabase.auth.signInWithPassword(data),
+        timeoutPromise,
+      ]);
+      if (result.error) {
+        setError(result.error.message);
+        setIsLoading(false);
+        return;
+      }
+      router.push("/overview");
+      router.refresh();
+    } catch (e) {
+      if (e instanceof Error && e.message === "TIMEOUT") {
+        setError(
+          "This is taking longer than usual. Please check your connection and try again."
+        );
+      }
+      setIsLoading(false);
     }
-
-    router.push("/overview");
-    router.refresh();
   }
 
   return (
@@ -127,9 +149,22 @@ function LoginForm() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4 px-8 pt-6">
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "Signing in…" : "Sign in"}
-          </Button>
+          <div className="mt-6">
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </Button>
+          </div>
           <p className="text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
             <Link href="/register" className="underline hover:text-foreground">
