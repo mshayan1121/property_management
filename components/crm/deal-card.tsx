@@ -3,7 +3,16 @@
 import { useDraggable } from "@dnd-kit/core";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { PermissionGate } from "@/components/shared/permission-gate";
 import { formatCurrency } from "@/lib/utils";
+import { MoreVertical, Trash2 } from "lucide-react";
 
 interface Deal {
   id: string;
@@ -18,12 +27,14 @@ interface Deal {
 interface DealCardProps {
   deal: Deal;
   onDealClick?: (deal: Deal) => void;
+  onDelete?: (deal: Deal) => void;
   isDragging?: boolean;
 }
 
 export function DealCard({
   deal,
   onDealClick,
+  onDelete,
   isDragging = false,
 }: DealCardProps) {
   const { attributes, listeners, setNodeRef } = useDraggable({
@@ -45,9 +56,40 @@ export function DealCard({
           <span className="font-medium text-sm">
             {deal.reference ?? "—"}
           </span>
-          <Badge variant="secondary" className="text-xs capitalize">
-            {deal.type ?? "-"}
-          </Badge>
+          <div className="flex items-center gap-1">
+            <Badge variant="secondary" className="text-xs capitalize">
+              {deal.type ?? "-"}
+            </Badge>
+            {!isDragging && onDelete && (
+              <PermissionGate permission="canDelete">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
+                      <MoreVertical className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(deal);
+                      }}
+                    >
+                      <Trash2 className="mr-2 size-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </PermissionGate>
+            )}
+          </div>
         </div>
         <p className="mt-1 font-semibold text-primary">
           {formatCurrency(deal.value)}

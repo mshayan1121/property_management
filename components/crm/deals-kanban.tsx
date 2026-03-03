@@ -26,8 +26,19 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { KanbanColumn } from "./kanban-column";
 import { DealCard } from "./deal-card";
+import { deleteDeal } from "@/app/(dashboard)/crm/deals/actions";
 
 const STAGES = [
   "qualified",
@@ -74,6 +85,8 @@ export function DealsKanban({
   const [deals, setDeals] = useState(initialDeals);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [dealToDelete, setDealToDelete] = useState<Deal | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -128,6 +141,22 @@ export function DealsKanban({
     setAddOpen(false);
   }, [router]);
 
+  async function handleConfirmDelete() {
+    if (!dealToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteDeal(dealToDelete.id);
+      setDeals((prev) => prev.filter((d) => d.id !== dealToDelete.id));
+      setDealToDelete(null);
+      toast.success("Deal deleted");
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete deal");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <>
       <div className="mb-4 flex justify-end">
@@ -152,6 +181,7 @@ export function DealsKanban({
               title={STAGE_LABELS[stage]}
               deals={deals.filter((d) => d.stage === stage)}
               onDealClick={(deal) => router.push(`/crm/deals/${deal.id}`)}
+              onDealDelete={(deal) => setDealToDelete(deal)}
             />
           ))}
         </div>
@@ -180,6 +210,28 @@ export function DealsKanban({
           </div>
         </SheetContent>
       </Sheet>
+
+      <AlertDialog open={!!dealToDelete} onOpenChange={(o) => !o && setDealToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete deal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {dealToDelete?.reference ?? "this deal"}? This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={() => handleConfirmDelete()}
+            >
+              {isDeleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

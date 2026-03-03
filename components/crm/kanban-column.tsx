@@ -18,6 +18,7 @@ interface KanbanColumnProps {
   title: string;
   deals: Deal[];
   onDealClick: (deal: Deal) => void;
+  onDealDelete?: (deal: Deal) => void;
 }
 
 export function KanbanColumn({
@@ -25,6 +26,7 @@ export function KanbanColumn({
   title,
   deals,
   onDealClick,
+  onDealDelete,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
@@ -47,6 +49,7 @@ export function KanbanColumn({
             key={deal.id}
             deal={deal}
             onDealClick={onDealClick}
+            onDelete={onDealDelete}
           />
         ))}
       </div>

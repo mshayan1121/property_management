@@ -26,12 +26,23 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { DealForm } from "./deal-form";
 import { PermissionGate } from "@/components/shared/permission-gate";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
+import { deleteDeal } from "@/app/(dashboard)/crm/deals/actions";
+import { toast } from "sonner";
 
 interface Deal {
   id: string;
@@ -94,6 +105,8 @@ export function DealsList({
   const [stageFilter, setStageFilter] = useState<string>(filterParams.stage);
   const [assigneeFilter, setAssigneeFilter] = useState<string>(filterParams.assignee);
   const [addOpen, setAddOpen] = useState(false);
+  const [deleteDealRow, setDeleteDealRow] = useState<Deal | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const updateUrl = useCallback(
     (updates: {
@@ -144,6 +157,21 @@ export function DealsList({
     },
     [updateUrl]
   );
+
+  async function handleConfirmDelete() {
+    if (!deleteDealRow) return;
+    setIsDeleting(true);
+    try {
+      await deleteDeal(deleteDealRow.id);
+      toast.success("Deal deleted");
+      setDeleteDealRow(null);
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete deal");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
     <>
@@ -238,6 +266,7 @@ export function DealsList({
                 <TableHead>Commission</TableHead>
                 <TableHead>Assigned to</TableHead>
                 <TableHead>Date</TableHead>
+                <TableHead className="w-[80px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -268,6 +297,21 @@ export function DealsList({
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {formatDate(deal.created_at)}
+                  </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <PermissionGate permission="canDelete">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-destructive hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteDealRow(deal);
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </PermissionGate>
                   </TableCell>
                 </TableRow>
               ))}
@@ -306,6 +350,28 @@ export function DealsList({
           </div>
         </SheetContent>
       </Sheet>
+
+      <AlertDialog open={!!deleteDealRow} onOpenChange={(o) => !o && setDeleteDealRow(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete deal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {deleteDealRow?.reference ?? "this deal"}? This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={() => handleConfirmDelete()}
+            >
+              {isDeleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

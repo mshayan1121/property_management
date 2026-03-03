@@ -166,7 +166,16 @@ export function LeadsTable({
     const supabase = createClient();
     const { error } = await supabase.from("leads").delete().eq("id", lead.id);
     if (error) {
-      toast.error("Failed to delete lead");
+      // Log full error for debugging (Supabase returns code, message, details)
+      if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+        // eslint-disable-next-line no-console
+        console.error("[Leads delete]", { code: error.code, message: error.message, details: error.details });
+      }
+      if (error.code === "23503") {
+        toast.error("Cannot delete this lead because it is linked to one or more deals. Unlink the deal(s) first or delete them.");
+      } else {
+        toast.error(error.message || "Failed to delete lead");
+      }
       return;
     }
     await logAudit({
