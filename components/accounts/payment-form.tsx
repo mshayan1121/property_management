@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { logAudit } from "@/lib/audit";
 
 const paymentSchema = z.object({
   invoice_id: z.string().optional(),
@@ -60,19 +61,28 @@ export function PaymentForm({
 
   async function onSubmit(values: PaymentFormValues) {
     const supabase = createClient();
-    const { error } = await supabase.from("payments").insert({
+    const payload = {
       invoice_id: values.invoice_id || null,
       amount: values.amount,
       payment_date: values.payment_date,
       method: values.method,
       notes: values.notes || null,
       company_id: companyId,
-    });
+    };
+    const { error } = await supabase.from("payments").insert(payload);
 
     if (error) {
       toast.error("Failed to add payment");
       return;
     }
+
+    await logAudit({
+      action: "created",
+      resourceType: "payment",
+      resourceReference: `${values.method} ${values.amount} AED`,
+      newValues: payload,
+      companyId,
+    });
 
     if (values.invoice_id) {
       const { data: payments } = await supabase

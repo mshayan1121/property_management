@@ -23,13 +23,21 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { logAudit } from "@/lib/audit";
+
+import {
+  nameSchema,
+  emailSchema,
+  phoneSchema,
+  notesSchema,
+} from "@/lib/validations";
 
 const contactSchema = z.object({
-  full_name: z.string().min(1, "Full name is required"),
-  email: z.string().email("Invalid email").optional().or(z.literal("")),
-  phone: z.string().optional(),
+  full_name: nameSchema,
+  email: emailSchema.optional().or(z.literal("")),
+  phone: phoneSchema.optional().or(z.literal("")),
   type: z.enum(["buyer", "seller", "tenant", "landlord"]).optional(),
-  notes: z.string().optional(),
+  notes: notesSchema,
 });
 
 export type ContactFormValues = z.infer<typeof contactSchema>;
@@ -86,6 +94,14 @@ export function ContactForm({
         toast.error("Failed to update contact");
         return;
       }
+      await logAudit({
+        action: "updated",
+        resourceType: "contact",
+        resourceId: contact.id,
+        resourceReference: payload.full_name,
+        newValues: payload,
+        companyId,
+      });
       toast.success("Contact updated");
     } else {
       const { error } = await supabase.from("contacts").insert(payload);
@@ -94,6 +110,13 @@ export function ContactForm({
         toast.error("Failed to create contact");
         return;
       }
+      await logAudit({
+        action: "created",
+        resourceType: "contact",
+        resourceReference: payload.full_name,
+        newValues: payload,
+        companyId,
+      });
       toast.success("Contact created");
     }
     onSuccess();

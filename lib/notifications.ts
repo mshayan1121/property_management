@@ -39,7 +39,8 @@ async function createNotification(
     link: string | null;
     company_id: string;
   }
-) {
+  ) {
+  // @ts-expect-error - notifications table insert type can infer never when table is not in generated types
   await supabase.from("notifications").insert({
     user_id: payload.user_id,
     title: payload.title,
@@ -97,18 +98,37 @@ export async function generateNotifications(
       .not("status", "in", "('paid','cancelled')"),
   ]);
 
-  const tenants = tenantsRes.data ?? [];
-  const overdueInvoices = invoicesRes.data ?? [];
-  const pdcsDue = pdcsRes.data ?? [];
-  const overdueBills = billsRes.data ?? [];
+  const tenants = (tenantsRes.data ?? []) as { id: string; full_name: string; lease_end: string }[];
+  const overdueInvoices = (invoicesRes.data ?? []) as {
+    id: string;
+    reference: string;
+    total_amount: number;
+    due_date: string;
+    status: string;
+  }[];
+  const pdcsDue = (pdcsRes.data ?? []) as {
+    id: string;
+    cheque_number: string;
+    bank_name: string;
+    cheque_date: string;
+  }[];
+  const overdueBills = (billsRes.data ?? []) as {
+    id: string;
+    reference: string;
+    total_amount: number;
+    due_date: string;
+    status: string;
+  }[];
 
   await supabase
     .from("invoices")
+    // @ts-expect-error - table update type can infer never
     .update({ status: "overdue", updated_at: new Date().toISOString() })
     .in("id", overdueInvoices.map((i) => i.id));
 
   await supabase
     .from("bills")
+    // @ts-expect-error - table update type can infer never
     .update({ status: "overdue", updated_at: new Date().toISOString() })
     .in("id", overdueBills.map((b) => b.id));
 

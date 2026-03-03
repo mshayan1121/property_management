@@ -319,6 +319,22 @@ export default function SettingsPage() {
         </Card>
       )}
 
+      {canManageUsers && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Audit Log</CardTitle>
+            <CardDescription>
+              View create, update, and delete activity across the platform (Admin only)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <Link href="/settings/audit-log">View audit log</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Change Password</CardTitle>

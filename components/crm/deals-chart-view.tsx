@@ -46,13 +46,13 @@ export function DealsChartView({
           <CardDescription>Pipeline distribution</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
             {dealsByStage.length === 0 ? (
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                 No deals yet
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={300} minWidth={0}>
                 <BarChart data={dealsByStage} margin={{ left: 20, right: 20 }}>
                   <XAxis
                     dataKey="name"
@@ -80,13 +80,13 @@ export function DealsChartView({
           <CardDescription>Total value (AED) per month</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
             {dealValueByMonth.length === 0 ? (
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                 No deals yet
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={300} minWidth={0}>
                 <BarChart data={dealValueByMonth} margin={{ left: 20, right: 20 }}>
                   <XAxis
                     dataKey="month"
@@ -112,13 +112,13 @@ export function DealsChartView({
           <CardDescription>Deal count by type</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
             {saleVsRental.length === 0 ? (
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                 No deals yet
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={300} minWidth={0}>
                 <PieChart>
                   <Pie
                     data={saleVsRental}

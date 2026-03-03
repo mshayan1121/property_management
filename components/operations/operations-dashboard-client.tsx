@@ -47,13 +47,13 @@ export function OperationsDashboardClient({
           <CardDescription>Pending, in progress, completed, cancelled</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
             {!hasDonut ? (
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                 No projects yet
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={300} minWidth={0}>
                 <PieChart>
                   <Pie
                     data={projectsByStatus}
@@ -88,13 +88,13 @@ export function OperationsDashboardClient({
           <CardDescription>Maintenance, renovation, inspection, etc.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
             {!hasBar ? (
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                 No projects yet
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={300} minWidth={0}>
                 <BarChart
                   data={projectsByCategory}
                   margin={{ left: 20, right: 20, bottom: 60 }}

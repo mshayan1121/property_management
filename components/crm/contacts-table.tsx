@@ -42,6 +42,7 @@ import { ContactForm } from "./contact-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { logAudit } from "@/lib/audit";
 
 interface Contact {
   id: string;
@@ -94,6 +95,14 @@ export function ContactsTable({
       toast.error("Failed to delete contact");
       return;
     }
+    await logAudit({
+      action: "deleted",
+      resourceType: "contact",
+      resourceId: contact.id,
+      resourceReference: contact.full_name,
+      oldValues: { full_name: contact.full_name },
+      companyId,
+    });
     setDeletedIds((prev) => new Set(prev).add(contact.id));
     setDeleteContact(null);
     toast.success("Contact deleted");

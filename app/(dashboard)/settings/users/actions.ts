@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ProfileRole } from "@/lib/types/supabase";
+import { logAudit } from "@/lib/audit";
 
 export type UserWithProfile = {
   id: string;
@@ -37,9 +38,10 @@ export async function getUsersForAdmin(): Promise<UserWithProfile[]> {
     .from("profiles")
     .select("id, full_name, role, created_at, status")
     .eq("company_id", companyId);
-  const { data: authUsers } = await admin.auth.admin.listUsers({ per_page: 1000 });
-  const usersById = new Map(authUsers.users.map((u) => [u.id, u]));
-  return (profiles ?? []).map((p) => {
+  const { data: authUsers } = await admin.auth.admin.listUsers({ perPage: 1000 });
+  const users = authUsers?.users ?? [];
+  const usersById = new Map(users.map((u: { id: string; email?: string }) => [u.id, u]));
+  return (profiles ?? []).map((p: { id: string; full_name: string; role: ProfileRole; created_at: string; status?: string }) => {
     const authUser = usersById.get(p.id);
     return {
       id: p.id,
@@ -47,7 +49,7 @@ export async function getUsersForAdmin(): Promise<UserWithProfile[]> {
       full_name: p.full_name,
       role: p.role,
       created_at: p.created_at,
-      status: (p as { status?: string }).status ?? "active",
+      status: p.status ?? "active",
     };
   });
 }
@@ -58,17 +60,33 @@ export async function updateUserRole(profileId: string, newRole: ProfileRole) {
   if (!user) return { error: "Not authenticated" };
   const { data: myProfile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, company_id")
     .eq("id", user.id)
     .single();
   if (myProfile?.role !== "admin") return { error: "Forbidden" };
   if (profileId === user.id) return { error: "Cannot change your own role" };
   const admin = createAdminClient();
+  const { data: targetProfileData } = await admin.from("profiles").select("full_name, role").eq("id", profileId).single();
+  const targetProfile = targetProfileData as { full_name: string; role: string } | null;
+  const oldRole = (targetProfile?.role as ProfileRole) ?? null;
   const { error } = await admin
     .from("profiles")
+    // @ts-expect-error - Supabase admin client types sometimes infer never for table update
     .update({ role: newRole, updated_at: new Date().toISOString() })
     .eq("id", profileId);
-  return error ? { error: error.message } : {};
+  if (error) return { error: error.message };
+  if (myProfile.company_id) {
+    await logAudit({
+      action: "updated",
+      resourceType: "profile",
+      resourceId: profileId,
+      resourceReference: targetProfile?.full_name ?? profileId,
+      oldValues: { role: oldRole },
+      newValues: { role: newRole },
+      companyId: myProfile.company_id,
+    });
+  }
+  return {};
 }
 
 export async function setUserStatus(profileId: string, status: "active" | "inactive") {
@@ -77,17 +95,33 @@ export async function setUserStatus(profileId: string, status: "active" | "inact
   if (!user) return { error: "Not authenticated" };
   const { data: myProfile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, company_id")
     .eq("id", user.id)
     .single();
   if (myProfile?.role !== "admin") return { error: "Forbidden" };
   if (profileId === user.id) return { error: "Cannot deactivate yourself" };
   const admin = createAdminClient();
+  const { data: targetProfileData } = await admin.from("profiles").select("full_name, status").eq("id", profileId).single();
+  const targetProfile = targetProfileData as { full_name: string; status?: string } | null;
+  const oldStatus = targetProfile?.status ?? null;
   const { error } = await admin
     .from("profiles")
+    // @ts-expect-error - Supabase admin client types sometimes infer never for table update
     .update({ status, updated_at: new Date().toISOString() })
     .eq("id", profileId);
-  return error ? { error: error.message } : {};
+  if (error) return { error: error.message };
+  if (myProfile.company_id) {
+    await logAudit({
+      action: "updated",
+      resourceType: "profile",
+      resourceId: profileId,
+      resourceReference: targetProfile?.full_name ?? profileId,
+      oldValues: { status: oldStatus },
+      newValues: { status },
+      companyId: myProfile.company_id,
+    });
+  }
+  return {};
 }
 
 const DEFAULT_INVITE_PASSWORD = "Jetset@1234";
@@ -114,6 +148,7 @@ export async function inviteUser(email: string, fullName: string, role: ProfileR
   });
   if (createError) return { error: createError.message };
   if (createData?.user?.id && myProfile.company_id) {
+    // @ts-expect-error - Supabase admin client types sometimes infer never for table upsert
     await admin.from("profiles").upsert({
       id: createData.user.id,
       full_name: fullName,

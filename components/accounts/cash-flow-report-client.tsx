@@ -65,8 +65,8 @@ export function CashFlowReportClient({
             <CardDescription>Last 6 months (AED)</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
+              <ResponsiveContainer width="100%" height={300} minWidth={0}>
                 <LineChart
                   data={trendData}
                   margin={{ left: 20, right: 20, top: 10, bottom: 60 }}

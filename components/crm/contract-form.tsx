@@ -24,16 +24,19 @@ import {
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useState, useRef } from "react";
+import { validateFile, ALLOWED_DOC_TYPES, MAX_FILE_SIZE } from "@/lib/file-validation";
+import { logAudit } from "@/lib/audit";
+import { amountSchema, dateSchema, notesSchema } from "@/lib/validations";
 
 const contractSchema = z.object({
-  deal_id: z.string().optional(),
-  contact_id: z.string().optional(),
+  deal_id: z.string().uuid().optional().or(z.literal("")),
+  contact_id: z.string().uuid().optional().or(z.literal("")),
   type: z.enum(["sale", "rental"]),
-  start_date: z.string().optional(),
-  end_date: z.string().optional(),
-  value: z.number().min(0),
+  start_date: dateSchema.optional().or(z.literal("")),
+  end_date: dateSchema.optional().or(z.literal("")),
+  value: amountSchema,
   status: z.enum(["draft", "active", "expired", "terminated"]),
-  notes: z.string().optional(),
+  notes: notesSchema,
 });
 
 export type ContractFormValues = z.infer<typeof contractSchema>;
@@ -91,6 +94,12 @@ export function ContractForm({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const validation = validateFile(file, ALLOWED_DOC_TYPES, MAX_FILE_SIZE);
+    if (!validation.valid) {
+      toast.error(validation.error);
+      return;
+    }
+
     setUploading(true);
     const supabase = createClient();
     const path = `contracts/${contract?.id ?? crypto.randomUUID()}/${file.name}`;
@@ -139,6 +148,14 @@ export function ContractForm({
         toast.error("Failed to update contract");
         return;
       }
+      await logAudit({
+        action: "updated",
+        resourceType: "contract",
+        resourceId: contract.id,
+        resourceReference: contract.reference ?? undefined,
+        newValues: payload,
+        companyId,
+      });
       toast.success("Contract updated");
     } else {
       const { error } = await supabase.from("contracts").insert(payload);
@@ -147,6 +164,12 @@ export function ContractForm({
         toast.error("Failed to create contract");
         return;
       }
+      await logAudit({
+        action: "created",
+        resourceType: "contract",
+        newValues: payload,
+        companyId,
+      });
       toast.success("Contract created");
     }
     onSuccess();

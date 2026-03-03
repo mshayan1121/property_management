@@ -41,6 +41,7 @@ import { PaymentForm } from "./payment-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { logAudit } from "@/lib/audit";
 
 const METHOD_COLORS: Record<string, string> = {
   cash: "bg-muted",
@@ -95,6 +96,14 @@ export function PaymentsTable({
       toast.error("Failed to delete payment");
       return;
     }
+    await logAudit({
+      action: "deleted",
+      resourceType: "payment",
+      resourceId: p.id,
+      resourceReference: p.reference,
+      oldValues: { reference: p.reference, amount: p.amount },
+      companyId,
+    });
     setDeletedIds((prev) => new Set(prev).add(p.id));
     setDeletePayment(null);
     toast.success("Payment deleted");

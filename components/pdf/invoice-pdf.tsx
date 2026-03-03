@@ -23,6 +23,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
   },
+  headerRight: {
+    textAlign: "right",
+  },
   companyName: {
     fontSize: 18,
     fontWeight: "bold",
@@ -146,7 +149,7 @@ export function InvoicePdfDocument({ data, companyName }: InvoicePdfDocumentProp
             <Text style={styles.companyName}>{companyName}</Text>
             <Text style={styles.meta}>Property Management</Text>
           </View>
-          <View style={{ textAlign: "right" } as object}>
+          <View style={styles.headerRight}>
             <Text style={styles.invoiceTitle}>INVOICE</Text>
             <Text style={styles.meta}>Ref: {data.reference}</Text>
             <Text style={styles.meta}>Date: {formatDatePdf(data.created_at)}</Text>

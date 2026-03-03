@@ -50,13 +50,13 @@ export function PropertiesDashboardClient({
           <CardDescription>Active vs inactive</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
             {propertiesByStatus.length === 0 ? (
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                 No properties yet
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={300} minWidth={0}>
                 <PieChart>
                   <Pie
                     data={propertiesByStatus}
@@ -85,13 +85,13 @@ export function PropertiesDashboardClient({
           <CardDescription>Top 5 properties by occupied units</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
             {barData.length === 0 ? (
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                 No units yet
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={300} minWidth={0}>
                 <BarChart data={barData} margin={{ left: 20, right: 20, top: 10, bottom: 60 }}>
                   <XAxis
                     dataKey="name"

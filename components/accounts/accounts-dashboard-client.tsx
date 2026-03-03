@@ -51,13 +51,13 @@ export function AccountsDashboardClient({
             <CardDescription>Draft, sent, paid, overdue, cancelled</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
               {!hasDonuts || invoicesByStatus.every((d) => d.value === 0) ? (
                 <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                   No invoices yet
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={300} minWidth={0}>
                   <PieChart>
                     <Pie
                       data={invoicesByStatus}
@@ -91,13 +91,13 @@ export function AccountsDashboardClient({
             <CardDescription>Pending, paid, overdue, cancelled</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
               {!hasDonuts || billsByStatus.every((d) => d.value === 0) ? (
                 <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                   No bills yet
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={300} minWidth={0}>
                   <PieChart>
                     <Pie
                       data={billsByStatus}
@@ -134,8 +134,8 @@ export function AccountsDashboardClient({
             <CardDescription>Last 6 months (AED)</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
+              <ResponsiveContainer width="100%" height={300} minWidth={0}>
                 <BarChart
                   data={revenueVsExpenses}
                   margin={{ left: 20, right: 20, top: 10, bottom: 60 }}

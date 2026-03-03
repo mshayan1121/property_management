@@ -42,6 +42,7 @@ import { InvoiceForm } from "./invoice-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { logAudit } from "@/lib/audit";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -113,6 +114,14 @@ export function InvoicesTable({
       toast.error("Failed to delete invoice");
       return;
     }
+    await logAudit({
+      action: "deleted",
+      resourceType: "invoice",
+      resourceId: inv.id,
+      resourceReference: inv.reference,
+      oldValues: { reference: inv.reference },
+      companyId,
+    });
     setDeletedIds((prev) => new Set(prev).add(inv.id));
     setDeleteInvoice(null);
     toast.success("Invoice deleted");

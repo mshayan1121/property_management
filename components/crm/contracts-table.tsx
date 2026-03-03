@@ -42,6 +42,7 @@ import { ContractForm } from "./contract-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { logAudit } from "@/lib/audit";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -110,6 +111,14 @@ export function ContractsTable({
       toast.error("Failed to delete contract");
       return;
     }
+    await logAudit({
+      action: "deleted",
+      resourceType: "contract",
+      resourceId: contract.id,
+      resourceReference: contract.reference ?? undefined,
+      oldValues: { reference: contract.reference },
+      companyId,
+    });
     setDeletedIds((prev) => new Set(prev).add(contract.id));
     setDeleteContract(null);
     toast.success("Contract deleted");

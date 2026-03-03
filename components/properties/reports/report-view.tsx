@@ -86,9 +86,9 @@ export function ReportView({ type, data }: ReportViewProps) {
             <CardDescription>Monthly rent revenue</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
               {(d.revenueByProperty as { name: string; value: number }[])?.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={300} minWidth={0}>
                   <BarChart data={d.revenueByProperty as { name: string; value: number }[]} margin={{ left: 20, right: 20, bottom: 60 }}>
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} stroke="var(--muted-foreground)" fontSize={12} />
                     <YAxis stroke="var(--muted-foreground)" fontSize={12} tickFormatter={(v) => `${v}`} />
@@ -219,9 +219,9 @@ export function ReportView({ type, data }: ReportViewProps) {
             <CardTitle>Revenue by Property</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
               {chartData?.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={300} minWidth={0}>
                   <BarChart data={chartData} margin={{ left: 20, right: 20, bottom: 60 }}>
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} stroke="var(--muted-foreground)" fontSize={12} />
                     <YAxis stroke="var(--muted-foreground)" fontSize={12} />
@@ -281,9 +281,9 @@ export function ReportView({ type, data }: ReportViewProps) {
             <CardTitle>Revenue by property</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
               {chartData?.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={300} minWidth={0}>
                   <BarChart data={chartData} margin={{ left: 20, right: 20, bottom: 60 }}>
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} stroke="var(--muted-foreground)" fontSize={12} />
                     <YAxis stroke="var(--muted-foreground)" fontSize={12} />
@@ -464,9 +464,9 @@ export function ReportView({ type, data }: ReportViewProps) {
             <CardDescription>New tenancy contracts (lease start) by month</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
               {monthlyData?.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={300} minWidth={0}>
                   <BarChart data={monthlyData} margin={{ left: 20, right: 20, bottom: 40 }}>
                     <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={12} />
                     <YAxis stroke="var(--muted-foreground)" fontSize={12} />

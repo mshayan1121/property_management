@@ -118,7 +118,7 @@ function filterNavItems(
 ) {
   return navItems.filter((item) => {
     if (item.title === "Overview") return true;
-    if ("permission" in item) return can(item.permission);
+    if ("permission" in item && item.permission) return can(item.permission);
     if (item.title === "CRM") return can("canAccessCRM");
     if (item.title === "Properties") return can("canAccessProperties");
     if (item.title === "Accounts") return can("canAccessAccounts");

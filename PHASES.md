@@ -119,14 +119,35 @@ Status: ✅ Complete
 ---
 
 ## Phase 7 — Security Hardening
-Status: In Progress
+Status: ✅ Complete
 
 ### Features
-- (TBD)
+- Security headers (next.config.ts)
+- Rate limiting on login (5 attempts per minute)
+- Input validation audit with shared zod schemas
+- File upload security (type and size validation)
+- Audit log system (audit_logs table)
+- Audit logging on leads, contacts, deals, tenants, invoices, payments
+- Audit log viewer page (admin only)
+- Environment variable audit (lib/env.ts)
+- API route protection review
+- RLS policy review
+- Security rules in .cursorrules
+- Recharts width/height warnings fixed
 
 ---
 
-## Out of Scope (for now)
+## Phase 8 — Performance & Pagination
+Status: In Progress
+
+### Features
+- Pagination on all data tables
+- Database indexes
+- Query optimization
+- Image optimization
+- Error boundaries
+
+---
 - AI features
 - Tenant self-service portal
 - Mobile app

@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
+import { checkLoginRateLimit } from "@/app/(auth)/login/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,6 +49,11 @@ function LoginForm() {
 
   async function onSubmit(data: LoginForm) {
     setError(null);
+    const { allowed } = await checkLoginRateLimit();
+    if (!allowed) {
+      setError("Too many attempts, please wait a minute and try again.");
+      return;
+    }
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword(data);
 

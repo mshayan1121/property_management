@@ -129,7 +129,29 @@ Completed: 03/03/2026
 - [x] Overdue auto-detection for invoices and bills
 
 ## Phase 7 — Security Hardening
+Status: ✅ Complete
+Completed: 03/03/2026
+
+### Completed
+- [x] Security headers added to next.config.ts
+- [x] Rate limiting on login (5 attempts per minute)
+- [x] Input validation audit with shared zod schemas
+- [x] File upload security (type and size validation)
+- [x] Audit log system with audit_logs table
+- [x] Audit logging on leads, contacts, deals, tenants, invoices, payments
+- [x] Audit log viewer page (admin only)
+- [x] Environment variable audit (lib/env.ts)
+- [x] API route protection review
+- [x] RLS policy review
+- [x] Security rules added to .cursorrules
+- [x] Fixed Recharts width/height warnings
+
+## Phase 8 — Performance & Pagination
 Status: In Progress
 
 ### Pending
-- [ ] (TBD)
+- [ ] Pagination on all data tables
+- [ ] Database indexes
+- [ ] Query optimization
+- [ ] Image optimization
+- [ ] Error boundaries

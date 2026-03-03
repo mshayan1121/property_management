@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { X } from "lucide-react";
+import { validateFile, ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE } from "@/lib/file-validation";
 import Image from "next/image";
 
 const propertySchema = z.object({
@@ -89,6 +90,11 @@ export function PropertyForm({
       const uploaded: string[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        const validation = validateFile(file, ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE);
+        if (!validation.valid) {
+          toast.error(validation.error);
+          continue;
+        }
         const ext = file.name.split(".").pop() ?? "jpg";
         const path = `${propertyId}/${Date.now()}-${i}.${ext}`;
         const { error } = await supabase.storage

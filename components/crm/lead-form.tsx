@@ -23,15 +23,22 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { logAudit } from "@/lib/audit";
+import {
+  nameSchema,
+  emailSchema,
+  phoneSchema,
+  notesSchema,
+} from "@/lib/validations";
 
 const leadSchema = z.object({
-  full_name: z.string().min(1, "Full name is required"),
-  email: z.string().email("Invalid email").optional().or(z.literal("")),
-  phone: z.string().optional(),
+  full_name: nameSchema,
+  email: emailSchema.optional().or(z.literal("")),
+  phone: phoneSchema.optional().or(z.literal("")),
   source: z.enum(["website", "referral", "social", "portal", "other"]).optional(),
   status: z.enum(["new", "contacted", "qualified", "lost"]).optional(),
-  assigned_to: z.string().optional(),
-  notes: z.string().optional(),
+  assigned_to: z.string().uuid().optional().or(z.literal("")),
+  notes: notesSchema,
 });
 
 export type LeadFormValues = z.infer<typeof leadSchema>;
@@ -96,6 +103,14 @@ export function LeadForm({
         toast.error("Failed to update lead");
         return;
       }
+      await logAudit({
+        action: "updated",
+        resourceType: "lead",
+        resourceId: lead.id,
+        resourceReference: payload.full_name,
+        newValues: payload,
+        companyId,
+      });
       toast.success("Lead updated");
     } else {
       const { error } = await supabase.from("leads").insert(payload);
@@ -104,6 +119,13 @@ export function LeadForm({
         toast.error("Failed to create lead");
         return;
       }
+      await logAudit({
+        action: "created",
+        resourceType: "lead",
+        resourceReference: payload.full_name,
+        newValues: payload,
+        companyId,
+      });
       toast.success("Lead created");
     }
     onSuccess();

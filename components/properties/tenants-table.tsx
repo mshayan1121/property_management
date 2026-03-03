@@ -43,6 +43,7 @@ import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { differenceInDays, parseISO } from "date-fns";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { logAudit } from "@/lib/audit";
 
 const STATUS_COLORS: Record<string, string> = {
   active: "bg-green-500/10 text-green-600 dark:text-green-400",
@@ -135,6 +136,14 @@ export function TenantsTable({
     if (t.unit_id) {
       await supabase.from("units").update({ status: "vacant", updated_at: new Date().toISOString() }).eq("id", t.unit_id);
     }
+    await logAudit({
+      action: "deleted",
+      resourceType: "tenant",
+      resourceId: t.id,
+      resourceReference: t.reference ?? t.full_name,
+      oldValues: { full_name: t.full_name },
+      companyId,
+    });
     setDeletedIds((prev) => new Set(prev).add(t.id));
     setDeleteTenant(null);
     toast.success("Tenant deleted");

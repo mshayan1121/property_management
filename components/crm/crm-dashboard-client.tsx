@@ -44,13 +44,13 @@ export function CrmDashboardClient({
           <CardDescription>Distribution of lead sources</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
             {leadsBySource.length === 0 ? (
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                 No leads yet
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={300} minWidth={0}>
                 <PieChart>
                   <Pie
                     data={leadsBySource}
@@ -79,13 +79,13 @@ export function CrmDashboardClient({
           <CardDescription>Pipeline distribution</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
             {dealsByStage.length === 0 ? (
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                 No deals yet
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={300} minWidth={0}>
                 <BarChart data={dealsByStage} layout="vertical" margin={{ left: 20, right: 20 }}>
                   <XAxis type="number" stroke="var(--muted-foreground)" fontSize={12} />
                   <YAxis

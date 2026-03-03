@@ -24,19 +24,21 @@ import {
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect } from "react";
+import { logAudit } from "@/lib/audit";
+import { amountSchema, notesSchema } from "@/lib/validations";
 
 const VAT_RATE = 0.05;
 
 const invoiceSchema = z.object({
-  contract_id: z.string().optional(),
-  tenant_id: z.string().optional(),
-  contact_id: z.string().optional(),
+  contract_id: z.string().uuid().optional(),
+  tenant_id: z.string().uuid().optional(),
+  contact_id: z.string().uuid().optional(),
   type: z.enum(["rent", "sale", "service", "other"]),
-  amount: z.number().min(0),
+  amount: amountSchema,
   vat_amount: z.number().min(0),
-  due_date: z.string().min(1, "Due date is required"),
+  due_date: z.string().min(1, "Due date is required").regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format"),
   status: z.enum(["draft", "sent", "paid", "overdue", "cancelled"]),
-  notes: z.string().optional(),
+  notes: notesSchema,
 });
 
 export type InvoiceFormValues = z.infer<typeof invoiceSchema>;
@@ -124,6 +126,14 @@ export function InvoiceForm({
         toast.error("Failed to update invoice");
         return;
       }
+      await logAudit({
+        action: "updated",
+        resourceType: "invoice",
+        resourceId: invoice.id,
+        resourceReference: invoice.reference,
+        newValues: payload,
+        companyId,
+      });
       toast.success("Invoice updated");
     } else {
       const { error } = await supabase.from("invoices").insert(payload);
@@ -132,6 +142,12 @@ export function InvoiceForm({
         toast.error("Failed to create invoice");
         return;
       }
+      await logAudit({
+        action: "created",
+        resourceType: "invoice",
+        newValues: payload,
+        companyId,
+      });
       toast.success("Invoice created");
     }
     onSuccess();

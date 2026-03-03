@@ -62,8 +62,8 @@ export function OverviewCharts({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="w-full h-[300px]" style={{ minHeight: 300 }}>
+            <ResponsiveContainer width="100%" height={300} minWidth={0}>
               <BarChart
                 data={revenueExpensesData}
                 margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
@@ -104,13 +104,13 @@ export function OverviewCharts({
           <CardDescription>Pipeline distribution</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[300px] w-full" style={{ minHeight: 300 }}>
             {donutData.length === 0 ? (
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                 No deals yet
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={300} minWidth={0}>
                 <PieChart>
                   <Pie
                     data={donutData}

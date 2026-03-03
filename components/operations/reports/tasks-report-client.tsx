@@ -23,13 +23,13 @@ export function TasksReportClient({ byStatus }: TasksReportClientProps) {
         <CardTitle>Tasks by status</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[280px]">
+        <div className="h-[280px] w-full" style={{ minHeight: 280 }}>
           {!hasData ? (
             <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
               No tasks
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={280} minWidth={0}>
               <PieChart>
                 <Pie
                   data={byStatus}

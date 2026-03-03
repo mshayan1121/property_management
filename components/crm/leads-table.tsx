@@ -43,6 +43,7 @@ import { LeadForm } from "./lead-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { logAudit } from "@/lib/audit";
 
 const STATUS_COLORS: Record<string, string> = {
   new: "bg-muted text-muted-foreground",
@@ -114,6 +115,14 @@ export function LeadsTable({
       toast.error("Failed to delete lead");
       return;
     }
+    await logAudit({
+      action: "deleted",
+      resourceType: "lead",
+      resourceId: lead.id,
+      resourceReference: lead.full_name,
+      oldValues: { full_name: lead.full_name },
+      companyId,
+    });
     setDeletedIds((prev) => new Set(prev).add(lead.id));
     setDeleteLead(null);
     toast.success("Lead deleted");

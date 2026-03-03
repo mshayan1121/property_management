@@ -23,19 +23,28 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { logAudit } from "@/lib/audit";
+import {
+  nameSchema,
+  emailSchema,
+  phoneSchema,
+  dateSchema,
+  notesSchema,
+  amountSchema,
+} from "@/lib/validations";
 
 const tenantSchema = z.object({
-  full_name: z.string().min(1, "Full name is required"),
-  email: z.string().email("Invalid email").optional().or(z.literal("")),
-  phone: z.string().optional(),
-  contact_id: z.string().optional(),
-  unit_id: z.string().min(1, "Unit is required"),
-  lease_start: z.string().min(1, "Lease start is required"),
-  lease_end: z.string().min(1, "Lease end is required"),
-  monthly_rent: z.coerce.number().min(0, "Required"),
+  full_name: nameSchema,
+  email: emailSchema.optional().or(z.literal("")),
+  phone: phoneSchema.optional().or(z.literal("")),
+  contact_id: z.string().uuid().optional().or(z.literal("")),
+  unit_id: z.string().min(1, "Unit is required").uuid("Invalid unit"),
+  lease_start: dateSchema,
+  lease_end: dateSchema,
+  monthly_rent: amountSchema,
   payment_day: z.coerce.number().min(1).max(28),
   status: z.enum(["active", "expired", "terminated"]),
-  notes: z.string().optional(),
+  notes: notesSchema,
 });
 
 export type TenantFormValues = z.infer<typeof tenantSchema>;
@@ -120,6 +129,14 @@ export function TenantForm({
       } else if ((values.status === "terminated" || values.status === "expired") && values.unit_id) {
         await supabase.from("units").update({ status: "vacant", updated_at: new Date().toISOString() }).eq("id", values.unit_id);
       }
+      await logAudit({
+        action: "updated",
+        resourceType: "tenant",
+        resourceId: tenant.id,
+        resourceReference: payload.full_name,
+        newValues: payload,
+        companyId,
+      });
       toast.success("Tenant updated");
     } else {
       const { error } = await supabase.from("tenants").insert(payload);
@@ -128,6 +145,13 @@ export function TenantForm({
         return;
       }
       await supabase.from("units").update({ status: "occupied", updated_at: new Date().toISOString() }).eq("id", values.unit_id);
+      await logAudit({
+        action: "created",
+        resourceType: "tenant",
+        resourceReference: payload.full_name,
+        newValues: payload,
+        companyId,
+      });
       toast.success("Tenant created");
     }
     onSuccess();

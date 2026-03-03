@@ -65,3 +65,13 @@ Never create files outside the defined structure without asking.
 ## Current Phase
 Always check PHASES.md and PROGRESS.md to understand what has been built
 and what is currently being worked on before making any changes.
+
+## Security Rules
+- Never expose SUPABASE_SERVICE_ROLE_KEY in client components
+- Always validate file type and size before upload
+- Always check auth in API routes
+- Always filter by company_id in all queries
+- Never use subquery on same table in RLS policy
+- Always use parameterized queries (Supabase handles this)
+- Rate limit auth endpoints
+- Log audit events for all create/update/delete actions

@@ -345,3 +345,21 @@ RLS enabled on all Phase 4 tables. Company-based policies: users only see their 
 - updated_at: timestamptz
 
 RLS enabled on all Phase 5 tables. Company-based policies: users only see their company's data.
+
+## Phase 7 Tables (Security — Audit)
+
+### audit_logs
+- id: uuid PK
+- user_id: uuid FK profiles nullable
+- user_email: text nullable
+- action: text not null (created/updated/deleted/viewed)
+- resource_type: text not null
+- resource_id: uuid nullable
+- resource_reference: text nullable
+- old_values: jsonb nullable
+- new_values: jsonb nullable
+- ip_address: text nullable
+- company_id: uuid FK companies
+- created_at: timestamptz default now()
+
+RLS: only admins can SELECT; authenticated can INSERT; no UPDATE or DELETE.

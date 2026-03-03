@@ -23,6 +23,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
   },
+  headerRight: {
+    textAlign: "right",
+  },
   companyName: {
     fontSize: 18,
     fontWeight: "bold",
@@ -146,7 +149,7 @@ export function BillPdfDocument({ data, companyName }: BillPdfDocumentProps) {
             <Text style={styles.companyName}>{companyName}</Text>
             <Text style={styles.meta}>Property Management</Text>
           </View>
-          <View style={{ textAlign: "right" } as object}>
+          <View style={styles.headerRight}>
             <Text style={styles.billTitle}>BILL</Text>
             <Text style={styles.meta}>Ref: {data.reference}</Text>
             <Text style={styles.meta}>Due: {formatDatePdf(data.due_date)}</Text>

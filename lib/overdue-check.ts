@@ -10,26 +10,30 @@ export async function checkAndUpdateOverdue(
   const supabase = createAdminClient();
   const today = new Date().toISOString().slice(0, 10);
 
-  const { data: overdueInvoices } = await supabase
+  const { data: overdueInvoicesData } = await supabase
     .from("invoices")
     .select("id")
     .eq("company_id", companyId)
     .lt("due_date", today)
     .not("status", "in", "('paid','cancelled')");
 
-  const { data: overdueBills } = await supabase
+  const { data: overdueBillsData } = await supabase
     .from("bills")
     .select("id")
     .eq("company_id", companyId)
     .lt("due_date", today)
     .not("status", "in", "('paid','cancelled')");
 
+  const overdueInvoices = (overdueInvoicesData ?? []) as { id: string }[];
+  const overdueBills = (overdueBillsData ?? []) as { id: string }[];
+
   let invoicesUpdated = 0;
   let billsUpdated = 0;
 
-  if (overdueInvoices?.length) {
+  if (overdueInvoices.length) {
     await supabase
       .from("invoices")
+      // @ts-expect-error - admin client table update type can infer never
       .update({ status: "overdue", updated_at: new Date().toISOString() })
       .in(
         "id",
@@ -38,9 +42,10 @@ export async function checkAndUpdateOverdue(
     invoicesUpdated = overdueInvoices.length;
   }
 
-  if (overdueBills?.length) {
+  if (overdueBills.length) {
     await supabase
       .from("bills")
+      // @ts-expect-error - admin client table update type can infer never
       .update({ status: "overdue", updated_at: new Date().toISOString() })
       .in(
         "id",

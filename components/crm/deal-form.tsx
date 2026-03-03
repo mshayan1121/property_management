@@ -22,10 +22,12 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { logAudit } from "@/lib/audit";
+import { amountSchema, notesSchema } from "@/lib/validations";
 
 const dealSchema = z.object({
-  lead_id: z.string().optional(),
-  contact_id: z.string().optional(),
+  lead_id: z.string().uuid().optional().or(z.literal("")),
+  contact_id: z.string().uuid().optional().or(z.literal("")),
   type: z.enum(["sale", "rental"]),
   stage: z.enum([
     "qualified",
@@ -34,11 +36,11 @@ const dealSchema = z.object({
     "contract_draft",
     "contract_signed",
   ]),
-  value: z.number().min(0),
+  value: amountSchema,
   commission_rate: z.number().min(0).max(100),
   payment_type: z.enum(["cash", "mortgage", "bank_transfer", "cheque"]).optional(),
-  assigned_to: z.string().optional(),
-  notes: z.string().optional(),
+  assigned_to: z.string().uuid().optional().or(z.literal("")),
+  notes: notesSchema,
 });
 
 export type DealFormValues = z.infer<typeof dealSchema>;
@@ -118,6 +120,14 @@ export function DealForm({
         toast.error("Failed to update deal");
         return;
       }
+      await logAudit({
+        action: "updated",
+        resourceType: "deal",
+        resourceId: deal.id,
+        resourceReference: deal.reference ?? undefined,
+        newValues: payload,
+        companyId,
+      });
       toast.success("Deal updated");
     } else {
       const { error } = await supabase.from("deals").insert(payload);
@@ -126,6 +136,12 @@ export function DealForm({
         toast.error("Failed to create deal");
         return;
       }
+      await logAudit({
+        action: "created",
+        resourceType: "deal",
+        newValues: payload,
+        companyId,
+      });
       toast.success("Deal created");
     }
     onSuccess();

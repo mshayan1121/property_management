@@ -25,6 +25,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { validateFile, ALLOWED_DOC_TYPES, MAX_FILE_SIZE } from "@/lib/file-validation";
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { PermissionGate } from "@/components/shared/permission-gate";
@@ -128,6 +129,12 @@ export function DealDetailClient({
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const validation = validateFile(file, ALLOWED_DOC_TYPES, MAX_FILE_SIZE);
+    if (!validation.valid) {
+      toast.error(validation.error);
+      return;
+    }
 
     setUploading(true);
     const supabase = createClient();

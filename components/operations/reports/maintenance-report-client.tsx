@@ -16,8 +16,8 @@ export function MaintenanceReportClient({
         <CardTitle>Requests by category</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[280px]">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-[280px] w-full" style={{ minHeight: 280 }}>
+          <ResponsiveContainer width="100%" height={280} minWidth={0}>
             <BarChart
               data={byCategory}
               margin={{ left: 20, right: 20, bottom: 60 }}
