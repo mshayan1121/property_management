@@ -130,9 +130,8 @@ function filterNavItems(
 export function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { can, role, loading } = useRole();
-  // While role is loading, show all nav items so admin sees Settings once role loads
-  const visibleNavItems = loading ? navItems : filterNavItems(can);
+  const { can, role } = useRole();
+  const visibleNavItems = filterNavItems(can);
 
   async function handleLogout() {
     const supabase = createClient();

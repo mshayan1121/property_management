@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   Table,
@@ -42,6 +42,7 @@ import { ProjectForm } from "./project-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 const PRIORITY_COLORS: Record<string, string> = {
   low: "bg-muted text-muted-foreground",
@@ -78,6 +79,22 @@ interface ProjectsTableProps {
   companyId: string;
   properties: { id: string; reference: string; name: string }[];
   profiles: { id: string; full_name: string }[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; status: string; category: string; priority: string };
+}
+
+function buildProjectsUrl(params: { page: number; pageSize: number; search: string; status: string; category: string; priority: string }): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  if (params.search) sp.set("search", params.search);
+  if (params.status !== "all") sp.set("status", params.status);
+  if (params.category !== "all") sp.set("category", params.category);
+  if (params.priority !== "all") sp.set("priority", params.priority);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function ProjectsTable({
@@ -85,29 +102,41 @@ export function ProjectsTable({
   companyId,
   properties,
   profiles,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: ProjectsTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [search, setSearch] = useState(filterParams.search);
+  const [statusFilter, setStatusFilter] = useState<string>(filterParams.status);
+  const [categoryFilter, setCategoryFilter] = useState<string>(filterParams.category);
+  const [priorityFilter, setPriorityFilter] = useState<string>(filterParams.priority);
   const [addOpen, setAddOpen] = useState(false);
   const [editProject, setEditProject] = useState<ProjectRow | null>(null);
   const [deleteProject, setDeleteProject] = useState<ProjectRow | null>(null);
 
   const projects = initialProjects.filter((p) => !deletedIds.has(p.id));
 
-  const filteredProjects = projects.filter((p) => {
-    const matchSearch =
-      !search ||
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.reference.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || p.status === statusFilter;
-    const matchCategory = categoryFilter === "all" || p.category === categoryFilter;
-    const matchPriority = priorityFilter === "all" || p.priority === priorityFilter;
-    return matchSearch && matchStatus && matchCategory && matchPriority;
-  });
+  const updateUrl = useCallback(
+    (updates: { page?: number; pageSize?: number; search?: string; status?: string; category?: string; priority?: string }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      const searchNext = updates.search ?? search;
+      const statusNext = updates.status ?? statusFilter;
+      const categoryNext = updates.category ?? categoryFilter;
+      const priorityNext = updates.priority ?? priorityFilter;
+      router.push(pathname + buildProjectsUrl({ page, pageSize: pageSizeNext, search: searchNext, status: statusNext, category: categoryNext, priority: priorityNext }));
+    },
+    [router, pathname, currentPage, pageSize, search, statusFilter, categoryFilter, priorityFilter]
+  );
+
+  const handleSearchSubmit = useCallback(() => updateUrl({ page: 1, search }), [updateUrl, search]);
+  const handleStatusChange = useCallback((v: string) => { setStatusFilter(v); updateUrl({ page: 1, status: v }); }, [updateUrl]);
+  const handleCategoryChange = useCallback((v: string) => { setCategoryFilter(v); updateUrl({ page: 1, category: v }); }, [updateUrl]);
+  const handlePriorityChange = useCallback((v: string) => { setPriorityFilter(v); updateUrl({ page: 1, priority: v }); }, [updateUrl]);
 
   async function handleDelete(project: ProjectRow) {
     const supabase = createClient();
@@ -133,10 +162,12 @@ export function ProjectsTable({
               placeholder="Search by name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+              onBlur={handleSearchSubmit}
               className="pl-9"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -148,7 +179,7 @@ export function ProjectsTable({
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <Select value={categoryFilter} onValueChange={handleCategoryChange}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
@@ -161,7 +192,7 @@ export function ProjectsTable({
               <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <Select value={priorityFilter} onValueChange={handlePriorityChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Priority" />
             </SelectTrigger>
@@ -183,14 +214,14 @@ export function ProjectsTable({
       </div>
 
       <div className="rounded-md border">
-        {filteredProjects.length === 0 ? (
+        {projects.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {projects.length === 0
+              {totalCount === 0
                 ? "No projects yet. Add your first project."
                 : "No projects match your filters."}
             </p>
-            {projects.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button
                   variant="outline"
@@ -219,7 +250,7 @@ export function ProjectsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProjects.map((p) => (
+              {projects.map((p) => (
                 <TableRow
                   key={p.id}
                   className="cursor-pointer"
@@ -287,6 +318,16 @@ export function ProjectsTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

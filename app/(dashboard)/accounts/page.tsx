@@ -14,6 +14,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { subMonths, format } from "date-fns";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
 const getAccountsStats = cache(async () => {
   const supabase = await createClient();
@@ -181,30 +182,32 @@ const getAccountsStats = cache(async () => {
 
 export default async function AccountsDashboardPage() {
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Accounts & Finance
-          </h2>
-          <p className="text-muted-foreground">
-            Revenue, expenses, and financial overview
-          </p>
+    <ErrorBoundary>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">
+              Accounts & Finance
+            </h2>
+            <p className="text-muted-foreground">
+              Revenue, expenses, and financial overview
+            </p>
+          </div>
         </div>
+
+        <Suspense fallback={<AccountsStatsSkeleton />}>
+          <AccountsStatsCards />
+        </Suspense>
+
+        <Suspense fallback={<AccountsChartsSkeleton />}>
+          <AccountsCharts />
+        </Suspense>
+
+        <Suspense fallback={<RecentTablesSkeleton />}>
+          <RecentTables />
+        </Suspense>
       </div>
-
-      <Suspense fallback={<AccountsStatsSkeleton />}>
-        <AccountsStatsCards />
-      </Suspense>
-
-      <Suspense fallback={<AccountsChartsSkeleton />}>
-        <AccountsCharts />
-      </Suspense>
-
-      <Suspense fallback={<RecentTablesSkeleton />}>
-        <RecentTables />
-      </Suspense>
-    </div>
+    </ErrorBoundary>
   );
 }
 

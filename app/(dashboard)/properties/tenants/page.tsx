@@ -2,8 +2,17 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TenantsTable } from "@/components/properties/tenants-table";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
-async function getTenantsData() {
+type TenantsSearchParams = {
+  page?: string;
+  pageSize?: string;
+  search?: string;
+  status?: string;
+  property?: string;
+};
+
+async function getTenantsData(searchParams: TenantsSearchParams) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabase
@@ -37,15 +46,48 @@ async function getTenantsData() {
       contacts: [] as { id: string; full_name: string }[],
       properties: [] as { id: string; name: string }[],
       companyId: "",
+      totalCount: 0,
+      page: 1,
+      pageSize: 10,
     };
   }
 
-  const [tenantsRes, unitsRes, contactsRes, propertiesRes] = await Promise.all([
-    supabase
-      .from("tenants")
-      .select("id, reference, full_name, email, phone, contact_id, unit_id, lease_start, lease_end, monthly_rent, payment_day, status, notes")
+  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.pageSize ?? "10", 10) || 10));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const search = (searchParams.search ?? "").trim();
+  const statusFilter = searchParams.status ?? "all";
+  const propertyFilter = searchParams.property ?? "all";
+
+  let query = supabase
+    .from("tenants")
+    .select("id, reference, full_name, email, phone, contact_id, unit_id, lease_start, lease_end, monthly_rent, payment_day, status, notes", { count: "exact" })
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false });
+
+  if (search) {
+    query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+  }
+  if (statusFilter !== "all") {
+    query = query.eq("status", statusFilter);
+  }
+  if (propertyFilter !== "all") {
+    const { data: unitIds } = await supabase
+      .from("units")
+      .select("id")
       .eq("company_id", companyId)
-      .order("created_at", { ascending: false }),
+      .eq("property_id", propertyFilter);
+    const ids = (unitIds ?? []).map((u) => u.id);
+    if (ids.length > 0) {
+      query = query.in("unit_id", ids);
+    } else {
+      query = query.eq("unit_id", "00000000-0000-0000-0000-000000000000");
+    }
+  }
+
+  const [tenantsRes, unitsRes, contactsRes, propertiesRes] = await Promise.all([
+    query.range(from, to),
     supabase
       .from("units")
       .select("id, unit_number, property_id, status")
@@ -54,12 +96,12 @@ async function getTenantsData() {
     supabase.from("properties").select("id, name").eq("company_id", companyId),
   ]);
 
+  const count = tenantsRes.count ?? 0;
   const properties = propertiesRes.data ?? [];
   const propertyNames = new Map(properties.map((p) => [p.id, p.name]));
   const units = unitsRes.data ?? [];
   const unitMap = new Map(units.map((u) => [u.id, { ...u, property_name: propertyNames.get(u.property_id) ?? "-" }]));
 
-  // daysUntilExpiry is computed on the client to avoid hydration mismatch (server vs client "today")
   const tenants = (tenantsRes.data ?? []).map((t) => {
     const unit = t.unit_id ? unitMap.get(t.unit_id) : null;
     return {
@@ -105,26 +147,36 @@ async function getTenantsData() {
     contacts,
     properties,
     companyId,
+    totalCount: count,
+    page,
+    pageSize,
   };
 }
 
-export default async function TenantsPage() {
+export default async function TenantsPage({
+  searchParams,
+}: {
+  searchParams: Promise<TenantsSearchParams>;
+}) {
+  const params = await searchParams;
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Tenants</h2>
-        <p className="text-muted-foreground">Manage tenants and leases</p>
-      </div>
+    <ErrorBoundary>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Tenants</h2>
+          <p className="text-muted-foreground">Manage tenants and leases</p>
+        </div>
 
-      <Suspense fallback={<TenantsSkeleton />}>
-        <TenantsContent />
-      </Suspense>
-    </div>
+        <Suspense key={JSON.stringify(params)} fallback={<TenantsSkeleton />}>
+          <TenantsContent params={params} />
+        </Suspense>
+      </div>
+    </ErrorBoundary>
   );
 }
 
-async function TenantsContent() {
-  const { tenants, units, contacts, properties, companyId } = await getTenantsData();
+async function TenantsContent({ params }: { params: TenantsSearchParams }) {
+  const { tenants, units, contacts, properties, companyId, totalCount, page, pageSize } = await getTenantsData(params);
 
   if (!companyId) {
     return (
@@ -143,6 +195,14 @@ async function TenantsContent() {
       contacts={contacts}
       properties={properties}
       companyId={companyId}
+      totalCount={totalCount}
+      currentPage={page}
+      pageSize={pageSize}
+      filterParams={{
+        search: params.search ?? "",
+        status: params.status ?? "all",
+        property: params.property ?? "all",
+      }}
     />
   );
 }

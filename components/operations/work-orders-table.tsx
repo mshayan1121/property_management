@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -41,6 +41,7 @@ import { WorkOrderForm } from "./work-order-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-muted text-muted-foreground",
@@ -73,6 +74,21 @@ interface WorkOrdersTableProps {
   maintenanceRequests: { id: string; reference: string; title: string }[];
   vendors: { id: string; name: string }[];
   profiles: { id: string; full_name: string }[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; status: string; vendor: string };
+}
+
+function buildWorkOrdersUrl(params: { page: number; pageSize: number; search: string; status: string; vendor: string }): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  if (params.search) sp.set("search", params.search);
+  if (params.status !== "all") sp.set("status", params.status);
+  if (params.vendor !== "all") sp.set("vendor", params.vendor);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function WorkOrdersTable({
@@ -81,27 +97,38 @@ export function WorkOrdersTable({
   maintenanceRequests,
   vendors,
   profiles,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: WorkOrdersTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [vendorFilter, setVendorFilter] = useState<string>("all");
+  const [search, setSearch] = useState(filterParams.search);
+  const [statusFilter, setStatusFilter] = useState<string>(filterParams.status);
+  const [vendorFilter, setVendorFilter] = useState<string>(filterParams.vendor);
   const [addOpen, setAddOpen] = useState(false);
   const [editWO, setEditWO] = useState<WorkOrderRow | null>(null);
   const [deleteWO, setDeleteWO] = useState<WorkOrderRow | null>(null);
 
   const workOrders = initialWorkOrders.filter((w) => !deletedIds.has(w.id));
 
-  const filtered = workOrders.filter((w) => {
-    const matchSearch =
-      !search ||
-      w.title.toLowerCase().includes(search.toLowerCase()) ||
-      w.reference.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || w.status === statusFilter;
-    const matchVendor = vendorFilter === "all" || w.vendor_id === vendorFilter;
-    return matchSearch && matchStatus && matchVendor;
-  });
+  const updateUrl = useCallback(
+    (updates: { page?: number; pageSize?: number; search?: string; status?: string; vendor?: string }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      const searchNext = updates.search ?? search;
+      const statusNext = updates.status ?? statusFilter;
+      const vendorNext = updates.vendor ?? vendorFilter;
+      router.push(pathname + buildWorkOrdersUrl({ page, pageSize: pageSizeNext, search: searchNext, status: statusNext, vendor: vendorNext }));
+    },
+    [router, pathname, currentPage, pageSize, search, statusFilter, vendorFilter]
+  );
+
+  const handleSearchSubmit = useCallback(() => updateUrl({ page: 1, search }), [updateUrl, search]);
+  const handleStatusChange = useCallback((v: string) => { setStatusFilter(v); updateUrl({ page: 1, status: v }); }, [updateUrl]);
+  const handleVendorChange = useCallback((v: string) => { setVendorFilter(v); updateUrl({ page: 1, vendor: v }); }, [updateUrl]);
 
   async function handleDelete(wo: WorkOrderRow) {
     const supabase = createClient();
@@ -127,10 +154,12 @@ export function WorkOrdersTable({
               placeholder="Search by reference or title..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+              onBlur={handleSearchSubmit}
               className="pl-9"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -142,7 +171,7 @@ export function WorkOrdersTable({
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={vendorFilter} onValueChange={setVendorFilter}>
+          <Select value={vendorFilter} onValueChange={handleVendorChange}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Vendor" />
             </SelectTrigger>
@@ -165,14 +194,14 @@ export function WorkOrdersTable({
       </div>
 
       <div className="rounded-md border">
-        {filtered.length === 0 ? (
+        {workOrders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {workOrders.length === 0
+              {totalCount === 0
                 ? "No work orders yet."
                 : "No work orders match your filters."}
             </p>
-            {workOrders.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button
                   variant="outline"
@@ -201,7 +230,7 @@ export function WorkOrdersTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((w) => (
+              {workOrders.map((w) => (
                 <TableRow key={w.id}>
                   <TableCell className="font-medium">{w.reference}</TableCell>
                   <TableCell>{w.title}</TableCell>
@@ -259,6 +288,16 @@ export function WorkOrdersTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

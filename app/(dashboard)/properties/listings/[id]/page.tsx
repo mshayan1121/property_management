@@ -18,7 +18,7 @@ async function getPropertyDetail(propertyId: string) {
 
   const { data: property, error: propError } = await supabase
     .from("properties")
-    .select("*")
+    .select("id, reference, name, type, location, address, total_units, status, images")
     .eq("id", propertyId)
     .eq("company_id", companyId)
     .single();

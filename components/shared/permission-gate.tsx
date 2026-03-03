@@ -12,10 +12,10 @@ interface PermissionGateProps {
 /**
  * Renders children only if the current user has the given permission.
  * Use for add/edit/delete buttons and other role-gated UI.
+ * Role is provided server-side — no loading delay.
  */
 export function PermissionGate({ permission, children }: PermissionGateProps) {
-  const { can, loading } = useRole();
-  if (loading) return null;
+  const { can } = useRole();
   if (!can(permission)) return null;
   return <>{children}</>;
 }

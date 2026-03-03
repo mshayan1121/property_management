@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -44,6 +44,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { differenceInDays, parseISO } from "date-fns";
 import { PermissionGate } from "@/components/shared/permission-gate";
 import { logAudit } from "@/lib/audit";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 const STATUS_COLORS: Record<string, string> = {
   active: "bg-green-500/10 text-green-600 dark:text-green-400",
@@ -76,6 +77,10 @@ interface TenantsTableProps {
   contacts: { id: string; full_name: string }[];
   properties: { id: string; name: string }[];
   companyId: string;
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; status: string; property: string };
 }
 
 export function TenantsTable({
@@ -84,17 +89,65 @@ export function TenantsTable({
   contacts,
   properties,
   companyId,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: TenantsTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const tenants = initialTenants.filter((t) => !deletedIds.has(t.id));
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [propertyFilter, setPropertyFilter] = useState<string>("all");
+  const [search, setSearch] = useState(filterParams.search);
+  const [statusFilter, setStatusFilter] = useState<string>(filterParams.status);
+  const [propertyFilter, setPropertyFilter] = useState<string>(filterParams.property);
   const [addOpen, setAddOpen] = useState(false);
   const [editTenant, setEditTenant] = useState<TenantRow | null>(null);
   const [detailTenant, setDetailTenant] = useState<TenantRow | null>(null);
   const [deleteTenant, setDeleteTenant] = useState<TenantRow | null>(null);
+
+  function buildTenantsUrl(params: { page: number; pageSize: number; search: string; status: string; property: string }): string {
+    const sp = new URLSearchParams();
+    if (params.page > 1) sp.set("page", String(params.page));
+    if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+    if (params.search) sp.set("search", params.search);
+    if (params.status !== "all") sp.set("status", params.status);
+    if (params.property !== "all") sp.set("property", params.property);
+    const q = sp.toString();
+    return q ? `?${q}` : "";
+  }
+
+  const updateUrl = useCallback(
+    (updates: { page?: number; pageSize?: number; search?: string; status?: string; property?: string }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      const searchNext = updates.search ?? search;
+      const statusNext = updates.status ?? statusFilter;
+      const propertyNext = updates.property ?? propertyFilter;
+      router.push(pathname + buildTenantsUrl({ page, pageSize: pageSizeNext, search: searchNext, status: statusNext, property: propertyNext }));
+    },
+    [router, pathname, currentPage, pageSize, search, statusFilter, propertyFilter]
+  );
+
+  const handleSearchSubmit = useCallback(() => {
+    updateUrl({ page: 1, search });
+  }, [updateUrl, search]);
+
+  const handleStatusChange = useCallback(
+    (value: string) => {
+      setStatusFilter(value);
+      updateUrl({ page: 1, status: value });
+    },
+    [updateUrl]
+  );
+
+  const handlePropertyChange = useCallback(
+    (value: string) => {
+      setPropertyFilter(value);
+      updateUrl({ page: 1, property: value });
+    },
+    [updateUrl]
+  );
 
   // Compute daysUntilExpiry only on client to avoid hydration mismatch (server "today" vs client "today").
   // Depend on initialTenants (stable prop), not tenants (new array ref every render), to avoid infinite loop.
@@ -115,16 +168,7 @@ export function TenantsTable({
     setDeleteTenant(null);
   }, [router]);
 
-  const filtered = tenants.filter((t) => {
-    const matchSearch =
-      !search ||
-      t.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      (t.email?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
-      (t.phone?.includes(search) ?? false);
-    const matchStatus = statusFilter === "all" || t.status === statusFilter;
-    const matchProperty = propertyFilter === "all" || (propertyFilter && t.property_name === properties.find((p) => p.id === propertyFilter)?.name);
-    return matchSearch && matchStatus && matchProperty;
-  });
+  const filtered = tenants;
 
   async function handleDelete(t: TenantRow) {
     const supabase = createClient();
@@ -163,10 +207,12 @@ export function TenantsTable({
               placeholder="Search by name, email, phone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+              onBlur={handleSearchSubmit}
               className="pl-9"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -177,7 +223,7 @@ export function TenantsTable({
               <SelectItem value="terminated">Terminated</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={propertyFilter} onValueChange={setPropertyFilter}>
+          <Select value={propertyFilter} onValueChange={handlePropertyChange}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Property" />
             </SelectTrigger>
@@ -203,11 +249,11 @@ export function TenantsTable({
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {tenants.length === 0
+              {totalCount === 0
                 ? "No tenants yet. Add your first tenant to get started."
                 : "No tenants match your filters."}
             </p>
-            {tenants.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button variant="outline" className="mt-4" onClick={() => setAddOpen(true)}>
                   <Plus className="mr-2 size-4" />
@@ -301,6 +347,16 @@ export function TenantsTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -40,6 +40,7 @@ import { InventoryForm } from "./inventory-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 const STATUS_COLORS: Record<string, string> = {
   available: "bg-green-500/10 text-green-600 dark:text-green-400",
@@ -64,34 +65,63 @@ interface InventoryTableProps {
   initialItems: InventoryRow[];
   companyId: string;
   properties: { id: string; reference: string; name: string }[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; category: string; status: string; property: string };
+}
+
+function buildInventoryUrl(params: { page: number; pageSize: number; search: string; category: string; status: string; property: string }): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  if (params.search) sp.set("search", params.search);
+  if (params.category !== "all") sp.set("category", params.category);
+  if (params.status !== "all") sp.set("status", params.status);
+  if (params.property !== "all") sp.set("property", params.property);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function InventoryTable({
   initialItems,
   companyId,
   properties,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: InventoryTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [propertyFilter, setPropertyFilter] = useState<string>("all");
+  const [search, setSearch] = useState(filterParams.search);
+  const [categoryFilter, setCategoryFilter] = useState<string>(filterParams.category);
+  const [statusFilter, setStatusFilter] = useState<string>(filterParams.status);
+  const [propertyFilter, setPropertyFilter] = useState<string>(filterParams.property);
   const [addOpen, setAddOpen] = useState(false);
   const [editItem, setEditItem] = useState<InventoryRow | null>(null);
   const [deleteItem, setDeleteItem] = useState<InventoryRow | null>(null);
 
   const items = initialItems.filter((i) => !deletedIds.has(i.id));
 
-  const filtered = items.filter((i) => {
-    const matchSearch =
-      !search ||
-      i.name.toLowerCase().includes(search.toLowerCase());
-    const matchCategory = categoryFilter === "all" || i.category === categoryFilter;
-    const matchStatus = statusFilter === "all" || i.status === statusFilter;
-    const matchProperty = propertyFilter === "all" || i.property_id === propertyFilter;
-    return matchSearch && matchCategory && matchStatus && matchProperty;
-  });
+  const updateUrl = useCallback(
+    (updates: { page?: number; pageSize?: number; search?: string; category?: string; status?: string; property?: string }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      const searchNext = updates.search ?? search;
+      const categoryNext = updates.category ?? categoryFilter;
+      const statusNext = updates.status ?? statusFilter;
+      const propertyNext = updates.property ?? propertyFilter;
+      router.push(pathname + buildInventoryUrl({ page, pageSize: pageSizeNext, search: searchNext, category: categoryNext, status: statusNext, property: propertyNext }));
+    },
+    [router, pathname, currentPage, pageSize, search, categoryFilter, statusFilter, propertyFilter]
+  );
+
+  const handleSearchSubmit = useCallback(() => updateUrl({ page: 1, search }), [updateUrl, search]);
+  const handleCategoryChange = useCallback((v: string) => { setCategoryFilter(v); updateUrl({ page: 1, category: v }); }, [updateUrl]);
+  const handleStatusChange = useCallback((v: string) => { setStatusFilter(v); updateUrl({ page: 1, status: v }); }, [updateUrl]);
+  const handlePropertyChange = useCallback((v: string) => { setPropertyFilter(v); updateUrl({ page: 1, property: v }); }, [updateUrl]);
 
   function isLowStock(row: InventoryRow): boolean {
     return row.quantity <= row.minimum_quantity && row.status !== "out_of_stock";
@@ -124,10 +154,12 @@ export function InventoryTable({
               placeholder="Search by name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+              onBlur={handleSearchSubmit}
               className="pl-9"
             />
           </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <Select value={categoryFilter} onValueChange={handleCategoryChange}>
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
@@ -140,7 +172,7 @@ export function InventoryTable({
               <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -151,7 +183,7 @@ export function InventoryTable({
               <SelectItem value="out_of_stock">Out of stock</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={propertyFilter} onValueChange={setPropertyFilter}>
+          <Select value={propertyFilter} onValueChange={handlePropertyChange}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Property" />
             </SelectTrigger>
@@ -174,14 +206,14 @@ export function InventoryTable({
       </div>
 
       <div className="rounded-md border">
-        {filtered.length === 0 ? (
+        {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {items.length === 0
+              {totalCount === 0
                 ? "No inventory items yet."
                 : "No items match your filters."}
             </p>
-            {items.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button
                   variant="outline"
@@ -209,7 +241,7 @@ export function InventoryTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((i) => (
+              {items.map((i) => (
                 <TableRow
                   key={i.id}
                   className={
@@ -263,6 +295,16 @@ export function InventoryTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

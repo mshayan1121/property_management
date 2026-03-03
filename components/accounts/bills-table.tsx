@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -42,6 +42,7 @@ import { BillPdfButton } from "@/components/pdf/bill-pdf-button";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
@@ -73,6 +74,22 @@ interface BillsTableProps {
   companyName: string;
   properties: { id: string; reference: string; name: string }[];
   vendors: { id: string; name: string }[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; category: string; status: string; property: string };
+}
+
+function buildBillsUrl(params: { page: number; pageSize: number; search: string; category: string; status: string; property: string }): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  if (params.search) sp.set("search", params.search);
+  if (params.category !== "all") sp.set("category", params.category);
+  if (params.status !== "all") sp.set("status", params.status);
+  if (params.property !== "all") sp.set("property", params.property);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function BillsTable({
@@ -81,31 +98,41 @@ export function BillsTable({
   companyName,
   properties,
   vendors,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: BillsTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [propertyFilter, setPropertyFilter] = useState<string>("all");
+  const [search, setSearch] = useState(filterParams.search);
+  const [categoryFilter, setCategoryFilter] = useState<string>(filterParams.category);
+  const [statusFilter, setStatusFilter] = useState<string>(filterParams.status);
+  const [propertyFilter, setPropertyFilter] = useState<string>(filterParams.property);
   const [addOpen, setAddOpen] = useState(false);
   const [editBill, setEditBill] = useState<BillRow | null>(null);
   const [deleteBill, setDeleteBill] = useState<BillRow | null>(null);
 
   const bills = initialBills.filter((b) => !deletedIds.has(b.id));
 
-  const filteredBills = bills.filter((b) => {
-    const matchSearch =
-      !search ||
-      b.reference.toLowerCase().includes(search.toLowerCase()) ||
-      (b.description?.toLowerCase().includes(search.toLowerCase()) ?? false);
-    const matchCategory =
-      categoryFilter === "all" || b.category === categoryFilter;
-    const matchStatus = statusFilter === "all" || b.status === statusFilter;
-    const matchProperty =
-      propertyFilter === "all" || b.property_id === propertyFilter;
-    return matchSearch && matchCategory && matchStatus && matchProperty;
-  });
+  const updateUrl = useCallback(
+    (updates: { page?: number; pageSize?: number; search?: string; category?: string; status?: string; property?: string }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      const searchNext = updates.search ?? search;
+      const categoryNext = updates.category ?? categoryFilter;
+      const statusNext = updates.status ?? statusFilter;
+      const propertyNext = updates.property ?? propertyFilter;
+      router.push(pathname + buildBillsUrl({ page, pageSize: pageSizeNext, search: searchNext, category: categoryNext, status: statusNext, property: propertyNext }));
+    },
+    [router, pathname, currentPage, pageSize, search, categoryFilter, statusFilter, propertyFilter]
+  );
+
+  const handleSearchSubmit = useCallback(() => updateUrl({ page: 1, search }), [updateUrl, search]);
+  const handleCategoryChange = useCallback((value: string) => { setCategoryFilter(value); updateUrl({ page: 1, category: value }); }, [updateUrl]);
+  const handleStatusChange = useCallback((value: string) => { setStatusFilter(value); updateUrl({ page: 1, status: value }); }, [updateUrl]);
+  const handlePropertyChange = useCallback((value: string) => { setPropertyFilter(value); updateUrl({ page: 1, property: value }); }, [updateUrl]);
 
   async function handleDelete(b: BillRow) {
     const supabase = createClient();
@@ -146,10 +173,12 @@ export function BillsTable({
               placeholder="Search reference, description..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+              onBlur={handleSearchSubmit}
               className="pl-9"
             />
           </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <Select value={categoryFilter} onValueChange={handleCategoryChange}>
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
@@ -164,7 +193,7 @@ export function BillsTable({
               <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -176,7 +205,7 @@ export function BillsTable({
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={propertyFilter} onValueChange={setPropertyFilter}>
+          <Select value={propertyFilter} onValueChange={handlePropertyChange}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Property" />
             </SelectTrigger>
@@ -199,14 +228,14 @@ export function BillsTable({
       </div>
 
       <div className="rounded-md border">
-        {filteredBills.length === 0 ? (
+        {bills.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {bills.length === 0
+              {totalCount === 0
                 ? "No bills yet. Add your first bill."
                 : "No bills match your filters."}
             </p>
-            {bills.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button
                   variant="outline"
@@ -236,7 +265,7 @@ export function BillsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredBills.map((b) => (
+              {bills.map((b) => (
                 <TableRow key={b.id}>
                   <TableCell className="font-medium">{b.reference}</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -329,6 +358,16 @@ export function BillsTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

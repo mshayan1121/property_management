@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -31,6 +31,7 @@ import { Plus, Search } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { DealForm } from "./deal-form";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 interface Deal {
   id: string;
@@ -50,6 +51,29 @@ interface DealsListProps {
   leads: { id: string; full_name: string }[];
   contacts: { id: string; full_name: string }[];
   profiles: { id: string; full_name: string }[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; type: string; stage: string; assignee: string };
+}
+
+function buildDealsUrl(params: {
+  page: number;
+  pageSize: number;
+  search: string;
+  type: string;
+  stage: string;
+  assignee: string;
+}): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  if (params.search) sp.set("search", params.search);
+  if (params.type !== "all") sp.set("type", params.type);
+  if (params.stage !== "all") sp.set("stage", params.stage);
+  if (params.assignee !== "all") sp.set("assignee", params.assignee);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function DealsList({
@@ -58,27 +82,68 @@ export function DealsList({
   leads,
   contacts,
   profiles,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: DealsListProps) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [stageFilter, setStageFilter] = useState<string>("all");
-  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+  const pathname = usePathname();
+  const [search, setSearch] = useState(filterParams.search);
+  const [typeFilter, setTypeFilter] = useState<string>(filterParams.type);
+  const [stageFilter, setStageFilter] = useState<string>(filterParams.stage);
+  const [assigneeFilter, setAssigneeFilter] = useState<string>(filterParams.assignee);
   const [addOpen, setAddOpen] = useState(false);
 
-  const filteredDeals = initialDeals.filter((deal) => {
-    const matchSearch =
-      !search ||
-      (deal.reference?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
-      (deal.contact_name?.toLowerCase().includes(search.toLowerCase()) ?? false);
-    const matchType = typeFilter === "all" || deal.type === typeFilter;
-    const matchStage = stageFilter === "all" || deal.stage === stageFilter;
-    const matchAssignee =
-      assigneeFilter === "all" || deal.assigned_to_name === assigneeFilter;
-    return matchSearch && matchType && matchStage && matchAssignee;
-  });
+  const updateUrl = useCallback(
+    (updates: {
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      type?: string;
+      stage?: string;
+      assignee?: string;
+    }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      const searchNext = updates.search ?? search;
+      const typeNext = updates.type ?? typeFilter;
+      const stageNext = updates.stage ?? stageFilter;
+      const assigneeNext = updates.assignee ?? assigneeFilter;
+      router.push(
+        pathname + buildDealsUrl({ page, pageSize: pageSizeNext, search: searchNext, type: typeNext, stage: stageNext, assignee: assigneeNext })
+      );
+    },
+    [router, pathname, currentPage, pageSize, search, typeFilter, stageFilter, assigneeFilter]
+  );
 
-  const assignees = [...new Set(initialDeals.map((d) => d.assigned_to_name).filter(Boolean))];
+  const handleSearchSubmit = useCallback(() => {
+    updateUrl({ page: 1, search });
+  }, [updateUrl, search]);
+
+  const handleTypeChange = useCallback(
+    (value: string) => {
+      setTypeFilter(value);
+      updateUrl({ page: 1, type: value });
+    },
+    [updateUrl]
+  );
+
+  const handleStageChange = useCallback(
+    (value: string) => {
+      setStageFilter(value);
+      updateUrl({ page: 1, stage: value });
+    },
+    [updateUrl]
+  );
+
+  const handleAssigneeChange = useCallback(
+    (value: string) => {
+      setAssigneeFilter(value);
+      updateUrl({ page: 1, assignee: value });
+    },
+    [updateUrl]
+  );
 
   return (
     <>
@@ -90,10 +155,12 @@ export function DealsList({
               placeholder="Search reference, contact..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+              onBlur={handleSearchSubmit}
               className="pl-9"
             />
           </div>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <Select value={typeFilter} onValueChange={handleTypeChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -103,7 +170,7 @@ export function DealsList({
               <SelectItem value="rental">Rental</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={stageFilter} onValueChange={setStageFilter}>
+          <Select value={stageFilter} onValueChange={handleStageChange}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Stage" />
             </SelectTrigger>
@@ -116,15 +183,15 @@ export function DealsList({
               <SelectItem value="contract_signed">Contract Signed</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+          <Select value={assigneeFilter} onValueChange={handleAssigneeChange}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Assigned" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All assignees</SelectItem>
-              {assignees.map((a) => (
-                <SelectItem key={a!} value={a!}>
-                  {a}
+              {profiles.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.full_name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -139,14 +206,14 @@ export function DealsList({
       </div>
 
       <div className="rounded-md border">
-        {filteredDeals.length === 0 ? (
+        {initialDeals.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {initialDeals.length === 0
+              {totalCount === 0
                 ? "No deals yet. Add your first deal to get started."
                 : "No deals match your filters."}
             </p>
-            {initialDeals.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button
                   variant="outline"
@@ -174,7 +241,7 @@ export function DealsList({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDeals.map((deal) => (
+              {initialDeals.map((deal) => (
                 <TableRow
                   key={deal.id}
                   className="cursor-pointer"
@@ -208,6 +275,16 @@ export function DealsList({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

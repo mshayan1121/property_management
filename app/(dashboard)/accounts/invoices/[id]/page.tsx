@@ -38,7 +38,7 @@ async function getInvoiceDetail(id: string) {
 
   const { data: invoice, error } = await supabase
     .from("invoices")
-    .select("*")
+    .select("id, reference, type, contract_id, tenant_id, contact_id, amount, vat_amount, total_amount, due_date, status, notes, created_at")
     .eq("id", id)
     .eq("company_id", companyId)
     .single();

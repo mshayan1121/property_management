@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -41,6 +41,7 @@ import { MaintenanceForm } from "./maintenance-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 const PRIORITY_COLORS: Record<string, string> = {
   low: "bg-muted text-muted-foreground",
@@ -83,6 +84,23 @@ interface MaintenanceTableProps {
   units: { id: string; unit_number: string; property_id: string }[];
   tenants: { id: string; full_name: string; reference: string }[];
   profiles: { id: string; full_name: string }[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; status: string; category: string; priority: string; property: string };
+}
+
+function buildMaintenanceUrl(params: { page: number; pageSize: number; search: string; status: string; category: string; priority: string; property: string }): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  if (params.search) sp.set("search", params.search);
+  if (params.status !== "all") sp.set("status", params.status);
+  if (params.category !== "all") sp.set("category", params.category);
+  if (params.priority !== "all") sp.set("priority", params.priority);
+  if (params.property !== "all") sp.set("property", params.property);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function MaintenanceTable({
@@ -92,14 +110,19 @@ export function MaintenanceTable({
   units,
   tenants,
   profiles,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: MaintenanceTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [priorityFilter, setPriorityFilter] = useState<string>("all");
-  const [propertyFilter, setPropertyFilter] = useState<string>("all");
+  const [search, setSearch] = useState(filterParams.search);
+  const [statusFilter, setStatusFilter] = useState<string>(filterParams.status);
+  const [categoryFilter, setCategoryFilter] = useState<string>(filterParams.category);
+  const [priorityFilter, setPriorityFilter] = useState<string>(filterParams.priority);
+  const [propertyFilter, setPropertyFilter] = useState<string>(filterParams.property);
   const [addOpen, setAddOpen] = useState(false);
   const [editRequest, setEditRequest] = useState<MaintenanceRow | null>(null);
   const [detailRequest, setDetailRequest] = useState<MaintenanceRow | null>(null);
@@ -107,17 +130,25 @@ export function MaintenanceTable({
 
   const requests = initialRequests.filter((r) => !deletedIds.has(r.id));
 
-  const filteredRequests = requests.filter((r) => {
-    const matchSearch =
-      !search ||
-      r.title.toLowerCase().includes(search.toLowerCase()) ||
-      r.reference.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || r.status === statusFilter;
-    const matchCategory = categoryFilter === "all" || r.category === categoryFilter;
-    const matchPriority = priorityFilter === "all" || r.priority === priorityFilter;
-    const matchProperty = propertyFilter === "all" || r.property_id === propertyFilter;
-    return matchSearch && matchStatus && matchCategory && matchPriority && matchProperty;
-  });
+  const updateUrl = useCallback(
+    (updates: { page?: number; pageSize?: number; search?: string; status?: string; category?: string; priority?: string; property?: string }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      const searchNext = updates.search ?? search;
+      const statusNext = updates.status ?? statusFilter;
+      const categoryNext = updates.category ?? categoryFilter;
+      const priorityNext = updates.priority ?? priorityFilter;
+      const propertyNext = updates.property ?? propertyFilter;
+      router.push(pathname + buildMaintenanceUrl({ page, pageSize: pageSizeNext, search: searchNext, status: statusNext, category: categoryNext, priority: priorityNext, property: propertyNext }));
+    },
+    [router, pathname, currentPage, pageSize, search, statusFilter, categoryFilter, priorityFilter, propertyFilter]
+  );
+
+  const handleSearchSubmit = useCallback(() => updateUrl({ page: 1, search }), [updateUrl, search]);
+  const handleStatusChange = useCallback((v: string) => { setStatusFilter(v); updateUrl({ page: 1, status: v }); }, [updateUrl]);
+  const handleCategoryChange = useCallback((v: string) => { setCategoryFilter(v); updateUrl({ page: 1, category: v }); }, [updateUrl]);
+  const handlePriorityChange = useCallback((v: string) => { setPriorityFilter(v); updateUrl({ page: 1, priority: v }); }, [updateUrl]);
+  const handlePropertyChange = useCallback((v: string) => { setPropertyFilter(v); updateUrl({ page: 1, property: v }); }, [updateUrl]);
 
   async function handleDelete(request: MaintenanceRow) {
     const supabase = createClient();
@@ -171,10 +202,12 @@ export function MaintenanceTable({
               placeholder="Search by title or reference..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+              onBlur={handleSearchSubmit}
               className="pl-9"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -187,7 +220,7 @@ export function MaintenanceTable({
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <Select value={categoryFilter} onValueChange={handleCategoryChange}>
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
@@ -202,7 +235,7 @@ export function MaintenanceTable({
               <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <Select value={priorityFilter} onValueChange={handlePriorityChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Priority" />
             </SelectTrigger>
@@ -214,7 +247,7 @@ export function MaintenanceTable({
               <SelectItem value="urgent">Urgent</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={propertyFilter} onValueChange={setPropertyFilter}>
+          <Select value={propertyFilter} onValueChange={handlePropertyChange}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Property" />
             </SelectTrigger>
@@ -237,14 +270,14 @@ export function MaintenanceTable({
       </div>
 
       <div className="rounded-md border">
-        {filteredRequests.length === 0 ? (
+        {requests.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {requests.length === 0
+              {totalCount === 0
                 ? "No maintenance requests yet."
                 : "No requests match your filters."}
             </p>
-            {requests.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button
                   variant="outline"
@@ -274,7 +307,7 @@ export function MaintenanceTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRequests.map((r) => (
+              {requests.map((r) => (
                 <TableRow
                   key={r.id}
                   className="cursor-pointer"
@@ -354,6 +387,16 @@ export function MaintenanceTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

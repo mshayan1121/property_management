@@ -2,8 +2,11 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UnitsTable } from "@/components/properties/units-table";
+import { TableSkeleton } from "@/components/shared/table-skeleton";
 
-async function getUnitsData() {
+type UnitsSearchParams = { page?: string; pageSize?: string };
+
+async function getUnitsData(searchParams: UnitsSearchParams) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabase
@@ -30,31 +33,45 @@ async function getUnitsData() {
       }[],
       properties: [] as { id: string; name: string }[],
       companyId: "",
+      totalCount: 0,
+      page: 1,
+      pageSize: 10,
     };
   }
+
+  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.pageSize ?? "10", 10) || 10));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   const [unitsRes, propertiesRes] = await Promise.all([
     supabase
       .from("units")
-      .select("id, property_id, unit_number, floor, size_sqft, bedrooms, bathrooms, type, status, rent_amount")
+      .select("id, property_id, unit_number, floor, size_sqft, bedrooms, bathrooms, type, status, rent_amount", { count: "exact" })
       .eq("company_id", companyId)
       .order("property_id")
-      .order("unit_number"),
+      .order("unit_number")
+      .range(from, to),
     supabase.from("properties").select("id, name").eq("company_id", companyId).order("name"),
   ]);
 
   const properties = propertiesRes.data ?? [];
   const propertyNames = new Map(properties.map((p) => [p.id, p.name]));
-
   const units = (unitsRes.data ?? []).map((u) => ({
     ...u,
     property_name: propertyNames.get(u.property_id) ?? "-",
   }));
+  const totalCount = unitsRes.count ?? 0;
 
-  return { units, properties, companyId };
+  return { units, properties, companyId, totalCount, page, pageSize };
 }
 
-export default async function UnitsPage() {
+export default async function UnitsPage({
+  searchParams,
+}: {
+  searchParams: Promise<UnitsSearchParams>;
+}) {
+  const params = await searchParams;
   return (
     <div className="space-y-6">
       <div>
@@ -62,15 +79,15 @@ export default async function UnitsPage() {
         <p className="text-muted-foreground">Manage units across properties</p>
       </div>
 
-      <Suspense fallback={<UnitsSkeleton />}>
-        <UnitsContent />
+      <Suspense key={JSON.stringify(params)} fallback={<TableSkeleton rows={10} columns={8} />}>
+        <UnitsContent params={params} />
       </Suspense>
     </div>
   );
 }
 
-async function UnitsContent() {
-  const { units, properties, companyId } = await getUnitsData();
+async function UnitsContent({ params }: { params: UnitsSearchParams }) {
+  const { units, properties, companyId, totalCount, page, pageSize } = await getUnitsData(params);
 
   if (!companyId) {
     return (
@@ -87,20 +104,9 @@ async function UnitsContent() {
       initialUnits={units}
       properties={properties}
       companyId={companyId}
+      totalCount={totalCount}
+      currentPage={page}
+      pageSize={pageSize}
     />
-  );
-}
-
-function UnitsSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div className="flex gap-4 flex-wrap">
-        <Skeleton className="h-10 flex-1 max-w-sm min-w-[160px]" />
-        <Skeleton className="h-10 w-[160px]" />
-        <Skeleton className="h-10 w-[120px]" />
-        <Skeleton className="h-10 w-[130px]" />
-      </div>
-      <Skeleton className="h-[400px] w-full" />
-    </div>
   );
 }

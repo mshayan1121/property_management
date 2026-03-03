@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -42,6 +42,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
 import { parseISO, isBefore } from "date-fns";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 const PRIORITY_COLORS: Record<string, string> = {
   low: "bg-muted text-muted-foreground",
@@ -76,6 +77,22 @@ interface TasksTableProps {
   companyId: string;
   projects: { id: string; reference: string; name: string }[];
   profiles: { id: string; full_name: string }[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; status: string; priority: string; project: string };
+}
+
+function buildTasksUrl(params: { page: number; pageSize: number; search: string; status: string; priority: string; project: string }): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  if (params.search) sp.set("search", params.search);
+  if (params.status !== "all") sp.set("status", params.status);
+  if (params.priority !== "all") sp.set("priority", params.priority);
+  if (params.project !== "all") sp.set("project", params.project);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function TasksTable({
@@ -83,29 +100,41 @@ export function TasksTable({
   companyId,
   projects,
   profiles,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: TasksTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [priorityFilter, setPriorityFilter] = useState<string>("all");
-  const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [search, setSearch] = useState(filterParams.search);
+  const [statusFilter, setStatusFilter] = useState<string>(filterParams.status);
+  const [priorityFilter, setPriorityFilter] = useState<string>(filterParams.priority);
+  const [projectFilter, setProjectFilter] = useState<string>(filterParams.project);
   const [addOpen, setAddOpen] = useState(false);
   const [editTask, setEditTask] = useState<TaskRow | null>(null);
   const [deleteTask, setDeleteTask] = useState<TaskRow | null>(null);
 
   const tasks = initialTasks.filter((t) => !deletedIds.has(t.id));
 
-  const filteredTasks = tasks.filter((t) => {
-    const matchSearch =
-      !search ||
-      t.title.toLowerCase().includes(search.toLowerCase()) ||
-      t.reference.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || t.status === statusFilter;
-    const matchPriority = priorityFilter === "all" || t.priority === priorityFilter;
-    const matchProject = projectFilter === "all" || t.project_id === projectFilter;
-    return matchSearch && matchStatus && matchPriority && matchProject;
-  });
+  const updateUrl = useCallback(
+    (updates: { page?: number; pageSize?: number; search?: string; status?: string; priority?: string; project?: string }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      const searchNext = updates.search ?? search;
+      const statusNext = updates.status ?? statusFilter;
+      const priorityNext = updates.priority ?? priorityFilter;
+      const projectNext = updates.project ?? projectFilter;
+      router.push(pathname + buildTasksUrl({ page, pageSize: pageSizeNext, search: searchNext, status: statusNext, priority: priorityNext, project: projectNext }));
+    },
+    [router, pathname, currentPage, pageSize, search, statusFilter, priorityFilter, projectFilter]
+  );
+
+  const handleSearchSubmit = useCallback(() => updateUrl({ page: 1, search }), [updateUrl, search]);
+  const handleStatusChange = useCallback((v: string) => { setStatusFilter(v); updateUrl({ page: 1, status: v }); }, [updateUrl]);
+  const handlePriorityChange = useCallback((v: string) => { setPriorityFilter(v); updateUrl({ page: 1, priority: v }); }, [updateUrl]);
+  const handleProjectChange = useCallback((v: string) => { setProjectFilter(v); updateUrl({ page: 1, project: v }); }, [updateUrl]);
 
   function isOverdue(dueDate: string | null, status: string): boolean {
     if (!dueDate || status === "completed" || status === "cancelled")
@@ -137,10 +166,12 @@ export function TasksTable({
               placeholder="Search by title..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+              onBlur={handleSearchSubmit}
               className="pl-9"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -152,7 +183,7 @@ export function TasksTable({
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <Select value={priorityFilter} onValueChange={handlePriorityChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Priority" />
             </SelectTrigger>
@@ -164,7 +195,7 @@ export function TasksTable({
               <SelectItem value="urgent">Urgent</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={projectFilter} onValueChange={setProjectFilter}>
+          <Select value={projectFilter} onValueChange={handleProjectChange}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Project" />
             </SelectTrigger>
@@ -187,14 +218,14 @@ export function TasksTable({
       </div>
 
       <div className="rounded-md border">
-        {filteredTasks.length === 0 ? (
+        {tasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {tasks.length === 0
+              {totalCount === 0
                 ? "No tasks yet. Add your first task."
                 : "No tasks match your filters."}
             </p>
-            {tasks.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button
                   variant="outline"
@@ -222,7 +253,7 @@ export function TasksTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTasks.map((t) => (
+              {tasks.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.reference}</TableCell>
                   <TableCell>{t.title}</TableCell>
@@ -289,6 +320,16 @@ export function TasksTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -43,6 +43,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 const STATUS_COLORS: Record<string, string> = {
   vacant: "bg-green-500/10 text-green-600 dark:text-green-400",
@@ -67,13 +68,29 @@ interface UnitsTableProps {
   initialUnits: UnitRow[];
   properties: { id: string; name: string }[];
   companyId: string;
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+}
+
+function buildUnitsUrl(params: { page: number; pageSize: number }): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function UnitsTable({
   initialUnits,
   properties,
   companyId,
+  totalCount,
+  currentPage,
+  pageSize,
 }: UnitsTableProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const units = initialUnits.filter((u) => !deletedIds.has(u.id));
   const [search, setSearch] = useState("");
@@ -85,7 +102,6 @@ export function UnitsTable({
   const [editUnit, setEditUnit] = useState<UnitRow | null>(null);
   const [deleteUnit, setDeleteUnit] = useState<UnitRow | null>(null);
 
-  const router = useRouter();
   const refresh = useCallback(() => {
     router.refresh();
     setAddOpen(false);
@@ -93,6 +109,15 @@ export function UnitsTable({
     setEditUnit(null);
     setDeleteUnit(null);
   }, [router]);
+
+  const updateUrl = useCallback(
+    (updates: { page?: number; pageSize?: number }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      router.push(pathname + buildUnitsUrl({ page, pageSize: pageSizeNext }));
+    },
+    [router, pathname, currentPage, pageSize]
+  );
 
   const filtered = units.filter((u) => {
     const matchSearch =
@@ -181,11 +206,11 @@ export function UnitsTable({
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {units.length === 0
+              {totalCount === 0
                 ? "No units yet. Add or bulk create units to get started."
                 : "No units match your filters."}
             </p>
-            {units.length === 0 && (
+            {totalCount === 0 && (
               <div className="mt-4 flex gap-2">
                 <PermissionGate permission="canCreate">
                   <Button variant="outline" onClick={() => setBulkOpen(true)}>
@@ -260,6 +285,16 @@ export function UnitsTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[500px]">

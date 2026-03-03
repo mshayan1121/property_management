@@ -2,8 +2,17 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VendorsTable } from "@/components/accounts/vendors-table";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
-async function getVendorsData() {
+type VendorsSearchParams = {
+  page?: string;
+  pageSize?: string;
+  search?: string;
+  category?: string;
+  status?: string;
+};
+
+async function getVendorsData(searchParams: VendorsSearchParams) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -29,40 +38,73 @@ async function getVendorsData() {
         notes: string | null;
       }[],
       companyId: "",
+      totalCount: 0,
+      page: 1,
+      pageSize: 10,
     };
   }
 
-  const { data: vendors } = await supabase
+  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.pageSize ?? "10", 10) || 10));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const search = (searchParams.search ?? "").trim();
+  const categoryFilter = searchParams.category ?? "all";
+  const statusFilter = searchParams.status ?? "all";
+
+  let query = supabase
     .from("vendors")
-    .select("id, name, email, phone, category, address, trn, status, notes")
+    .select("id, name, email, phone, category, address, trn, status, notes", { count: "exact" })
     .eq("company_id", companyId)
     .order("name");
+
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+  }
+  if (categoryFilter !== "all") {
+    query = query.eq("category", categoryFilter);
+  }
+  if (statusFilter !== "all") {
+    query = query.eq("status", statusFilter);
+  }
+
+  const { data: vendors, count } = await query.range(from, to);
 
   return {
     vendors: vendors ?? [],
     companyId,
+    totalCount: count ?? 0,
+    page,
+    pageSize,
   };
 }
 
-export default async function VendorsPage() {
+export default async function VendorsPage({
+  searchParams,
+}: {
+  searchParams: Promise<VendorsSearchParams>;
+}) {
+  const params = await searchParams;
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Vendors</h2>
-        <p className="text-muted-foreground">
-          Manage vendor database and track payments
-        </p>
-      </div>
+    <ErrorBoundary>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Vendors</h2>
+          <p className="text-muted-foreground">
+            Manage vendor database and track payments
+          </p>
+        </div>
 
-      <Suspense fallback={<VendorsTableSkeleton />}>
-        <VendorsContent />
-      </Suspense>
-    </div>
+        <Suspense key={JSON.stringify(params)} fallback={<VendorsTableSkeleton />}>
+          <VendorsContent params={params} />
+        </Suspense>
+      </div>
+    </ErrorBoundary>
   );
 }
 
-async function VendorsContent() {
-  const { vendors, companyId } = await getVendorsData();
+async function VendorsContent({ params }: { params: VendorsSearchParams }) {
+  const { vendors, companyId, totalCount, page, pageSize } = await getVendorsData(params);
 
   if (!companyId) {
     return (
@@ -74,7 +116,20 @@ async function VendorsContent() {
     );
   }
 
-  return <VendorsTable initialVendors={vendors} companyId={companyId} />;
+  return (
+    <VendorsTable
+      initialVendors={vendors}
+      companyId={companyId}
+      totalCount={totalCount}
+      currentPage={page}
+      pageSize={pageSize}
+      filterParams={{
+        search: params.search ?? "",
+        category: params.category ?? "all",
+        status: params.status ?? "all",
+      }}
+    />
+  );
 }
 
 function VendorsTableSkeleton() {

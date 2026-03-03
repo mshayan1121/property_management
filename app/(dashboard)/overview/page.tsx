@@ -26,6 +26,7 @@ import {
 import { checkAndUpdateOverdue } from "@/lib/overdue-check";
 import { generateNotifications } from "@/lib/notifications";
 import { OverviewCharts } from "@/components/shared/overview-charts";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
 async function getOverviewData() {
   const supabase = await createClient();
@@ -282,18 +283,20 @@ function StatsSkeleton() {
 
 export default function OverviewPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Overview</h2>
-        <p className="text-muted-foreground">
-          Your property management at a glance
-        </p>
-      </div>
+    <ErrorBoundary>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Overview</h2>
+          <p className="text-muted-foreground">
+            Your property management at a glance
+          </p>
+        </div>
 
-      <Suspense fallback={<StatsSkeleton />}>
-        <OverviewContent />
-      </Suspense>
-    </div>
+        <Suspense fallback={<StatsSkeleton />}>
+          <OverviewContent />
+        </Suspense>
+      </div>
+    </ErrorBoundary>
   );
 }
 

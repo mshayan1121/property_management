@@ -2,8 +2,18 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LeadsTable } from "@/components/crm/leads-table";
+import { TableSkeleton } from "@/components/shared/table-skeleton";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
-async function getLeadsData() {
+type LeadsSearchParams = {
+  page?: string;
+  pageSize?: string;
+  search?: string;
+  source?: string;
+  status?: string;
+};
+
+async function getLeadsData(searchParams: LeadsSearchParams) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabase
@@ -29,21 +39,45 @@ async function getLeadsData() {
       }[],
       profiles: [] as { id: string; full_name: string }[],
       companyId: "",
+      totalCount: 0,
+      page: 1,
+      pageSize: 10,
     };
   }
 
+  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.pageSize ?? "10", 10) || 10));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const search = (searchParams.search ?? "").trim();
+  const source = searchParams.source ?? "all";
+  const status = searchParams.status ?? "all";
+
+  let query = supabase
+    .from("leads")
+    .select("id, full_name, email, phone, source, status, assigned_to, notes, created_at", { count: "exact" })
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false });
+
+  if (search) {
+    query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+  }
+  if (source !== "all") {
+    query = query.eq("source", source);
+  }
+  if (status !== "all") {
+    query = query.eq("status", status);
+  }
+
   const [leadsRes, profilesRes] = await Promise.all([
-    supabase
-      .from("leads")
-      .select("id, full_name, email, phone, source, status, assigned_to, notes, created_at")
-      .eq("company_id", companyId)
-      .order("created_at", { ascending: false }),
+    query.range(from, to),
     supabase
       .from("profiles")
       .select("id, full_name")
       .eq("company_id", companyId),
   ]);
 
+  const count = leadsRes.count ?? 0;
   const profilesMap = new Map(
     (profilesRes.data ?? []).map((p) => [p.id, p.full_name])
   );
@@ -57,28 +91,35 @@ async function getLeadsData() {
 
   const profiles = profilesRes.data ?? [];
 
-  return { leads, profiles, companyId };
+  return { leads, profiles, companyId, totalCount: count, page, pageSize };
 }
 
-export default async function LeadsPage() {
+export default async function LeadsPage({
+  searchParams,
+}: {
+  searchParams: Promise<LeadsSearchParams>;
+}) {
+  const params = await searchParams;
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Leads</h2>
-        <p className="text-muted-foreground">
-          Manage your leads and track their status
-        </p>
-      </div>
+    <ErrorBoundary>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Leads</h2>
+          <p className="text-muted-foreground">
+            Manage your leads and track their status
+          </p>
+        </div>
 
-      <Suspense fallback={<LeadsTableSkeleton />}>
-        <LeadsContent />
-      </Suspense>
-    </div>
+        <Suspense key={JSON.stringify(params)} fallback={<TableSkeleton rows={10} columns={8} />}>
+          <LeadsContent params={params} />
+        </Suspense>
+      </div>
+    </ErrorBoundary>
   );
 }
 
-async function LeadsContent() {
-  const { leads, profiles, companyId } = await getLeadsData();
+async function LeadsContent({ params }: { params: LeadsSearchParams }) {
+  const { leads, profiles, companyId, totalCount, page, pageSize } = await getLeadsData(params);
 
   if (!companyId) {
     return (
@@ -95,20 +136,10 @@ async function LeadsContent() {
       initialLeads={leads}
       profiles={profiles}
       companyId={companyId}
+      totalCount={totalCount}
+      currentPage={page}
+      pageSize={pageSize}
+      filterParams={{ search: params.search ?? "", source: params.source ?? "all", status: params.status ?? "all" }}
     />
-  );
-}
-
-function LeadsTableSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div className="flex gap-4">
-        <Skeleton className="h-10 flex-1 max-w-sm" />
-        <Skeleton className="h-10 w-[130px]" />
-        <Skeleton className="h-10 w-[130px]" />
-        <Skeleton className="h-10 w-[100px]" />
-      </div>
-      <Skeleton className="h-[400px] w-full" />
-    </div>
   );
 }

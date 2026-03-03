@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -30,7 +31,7 @@ export function DealsTimelineView({ deals }: DealsTimelineViewProps) {
 
   const grouped = deals.reduce<MonthGroup[]>((acc, deal) => {
     const d = new Date(deal.created_at);
-    const monthKey = d.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+    const monthKey = format(d, "MMMM yyyy");
     const year = d.getFullYear();
     let group = acc.find((g) => g.month === monthKey);
     if (!group) {

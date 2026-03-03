@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 interface AuditLogItem {
   id: string;
@@ -35,8 +36,8 @@ interface AuditLogItem {
 interface AuditLogClientProps {
   items: AuditLogItem[];
   totalCount: number;
-  totalPages: number;
   currentPage: number;
+  pageSize: number;
   filters: {
     action: string;
     resource_type: string;
@@ -49,8 +50,8 @@ interface AuditLogClientProps {
 export function AuditLogClient({
   items,
   totalCount,
-  totalPages,
   currentPage,
+  pageSize,
   filters,
 }: AuditLogClientProps) {
   const router = useRouter();
@@ -63,10 +64,18 @@ export function AuditLogClient({
   function buildUrl(updates: Record<string, string>) {
     const p = new URLSearchParams(searchParams.toString());
     Object.entries(updates).forEach(([k, v]) => {
-      if (v) p.set(k, v);
+      if (v !== undefined && v !== "") p.set(k, v);
       else p.delete(k);
     });
     p.set("page", "1");
+    return `/settings/audit-log?${p.toString()}`;
+  }
+
+  function buildPaginationUrl(page: number, newPageSize: number): string {
+    const p = new URLSearchParams(searchParams.toString());
+    p.set("page", String(page));
+    if (newPageSize !== 10) p.set("pageSize", String(newPageSize));
+    else p.delete("pageSize");
     return `/settings/audit-log?${p.toString()}`;
   }
 
@@ -236,38 +245,14 @@ export function AuditLogClient({
         </Table>
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-muted-foreground text-sm">
-            Showing {(currentPage - 1) * 50 + 1}–{Math.min(currentPage * 50, totalCount)} of {totalCount}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage <= 1}
-              onClick={() => {
-                const p = new URLSearchParams(searchParams.toString());
-                p.set("page", String(currentPage - 1));
-                router.push(`/settings/audit-log?${p.toString()}`);
-              }}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage >= totalPages}
-              onClick={() => {
-                const p = new URLSearchParams(searchParams.toString());
-                p.set("page", String(currentPage + 1));
-                router.push(`/settings/audit-log?${p.toString()}`);
-              }}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => router.push(buildPaginationUrl(page, pageSize))}
+          onPageSizeChange={(size) => router.push(buildPaginationUrl(1, size))}
+        />
       )}
     </div>
   );

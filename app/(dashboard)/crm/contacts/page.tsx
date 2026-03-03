@@ -2,8 +2,16 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ContactsTable } from "@/components/crm/contacts-table";
+import { TableSkeleton } from "@/components/shared/table-skeleton";
 
-async function getContactsData() {
+type ContactsSearchParams = {
+  page?: string;
+  pageSize?: string;
+  search?: string;
+  type?: string;
+};
+
+async function getContactsData(searchParams: ContactsSearchParams) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -27,22 +35,50 @@ async function getContactsData() {
         created_at: string;
       }[],
       companyId: "",
+      totalCount: 0,
+      page: 1,
+      pageSize: 10,
     };
   }
 
-  const { data: contacts } = await supabase
+  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.pageSize ?? "10", 10) || 10));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const search = (searchParams.search ?? "").trim();
+  const typeFilter = searchParams.type ?? "all";
+
+  let query = supabase
     .from("contacts")
-    .select("id, full_name, email, phone, type, notes, created_at")
+    .select("id, full_name, email, phone, type, notes, created_at", { count: "exact" })
     .eq("company_id", companyId)
     .order("created_at", { ascending: false });
+
+  if (search) {
+    query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+  }
+  if (typeFilter !== "all") {
+    query = query.eq("type", typeFilter);
+  }
+
+  const { data: contacts, count } = await query.range(from, to);
+  const totalCount = count ?? 0;
 
   return {
     contacts: contacts ?? [],
     companyId,
+    totalCount,
+    page,
+    pageSize,
   };
 }
 
-export default async function ContactsPage() {
+export default async function ContactsPage({
+  searchParams,
+}: {
+  searchParams: Promise<ContactsSearchParams>;
+}) {
+  const params = await searchParams;
   return (
     <div className="space-y-6">
       <div>
@@ -52,15 +88,15 @@ export default async function ContactsPage() {
         </p>
       </div>
 
-      <Suspense fallback={<ContactsTableSkeleton />}>
-        <ContactsContent />
+      <Suspense key={JSON.stringify(params)} fallback={<TableSkeleton rows={10} columns={6} />}>
+        <ContactsContent params={params} />
       </Suspense>
     </div>
   );
 }
 
-async function ContactsContent() {
-  const { contacts, companyId } = await getContactsData();
+async function ContactsContent({ params }: { params: ContactsSearchParams }) {
+  const { contacts, companyId, totalCount, page, pageSize } = await getContactsData(params);
 
   if (!companyId) {
     return (
@@ -73,19 +109,13 @@ async function ContactsContent() {
   }
 
   return (
-    <ContactsTable initialContacts={contacts} companyId={companyId} />
-  );
-}
-
-function ContactsTableSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div className="flex gap-4">
-        <Skeleton className="h-10 flex-1 max-w-sm" />
-        <Skeleton className="h-10 w-[130px]" />
-        <Skeleton className="h-10 w-[100px]" />
-      </div>
-      <Skeleton className="h-[400px] w-full" />
-    </div>
+    <ContactsTable
+      initialContacts={contacts}
+      companyId={companyId}
+      totalCount={totalCount}
+      currentPage={page}
+      pageSize={pageSize}
+      filterParams={{ search: params.search ?? "", type: params.type ?? "all" }}
+    />
   );
 }

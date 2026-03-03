@@ -2,8 +2,17 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InvoicesTable } from "@/components/accounts/invoices-table";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
-async function getInvoicesData() {
+type InvoicesSearchParams = {
+  page?: string;
+  pageSize?: string;
+  search?: string;
+  type?: string;
+  status?: string;
+};
+
+async function getInvoicesData(searchParams: InvoicesSearchParams) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -37,15 +46,38 @@ async function getInvoicesData() {
       tenants: [] as { id: string; reference: string; full_name: string }[],
       contacts: [] as { id: string; full_name: string }[],
       companyId: "",
+      totalCount: 0,
+      page: 1,
+      pageSize: 10,
     };
   }
 
+  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.pageSize ?? "10", 10) || 10));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const search = (searchParams.search ?? "").trim();
+  const typeFilter = searchParams.type ?? "all";
+  const statusFilter = searchParams.status ?? "all";
+
+  let query = supabase
+    .from("invoices")
+    .select("id, reference, type, contract_id, tenant_id, contact_id, amount, vat_amount, total_amount, due_date, status, notes", { count: "exact" })
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false });
+
+  if (search) {
+    query = query.ilike("reference", `%${search}%`);
+  }
+  if (typeFilter !== "all") {
+    query = query.eq("type", typeFilter);
+  }
+  if (statusFilter !== "all") {
+    query = query.eq("status", statusFilter);
+  }
+
   const [invoicesRes, contractsRes, tenantsRes, contactsRes] = await Promise.all([
-    supabase
-      .from("invoices")
-      .select("id, reference, type, contract_id, tenant_id, contact_id, amount, vat_amount, total_amount, due_date, status, notes")
-      .eq("company_id", companyId)
-      .order("created_at", { ascending: false }),
+    query.range(from, to),
     supabase
       .from("contracts")
       .select("id, reference")
@@ -60,6 +92,7 @@ async function getInvoicesData() {
       .eq("company_id", companyId),
   ]);
 
+  const count = invoicesRes.count ?? 0;
   const tenantsMap = new Map(
     (tenantsRes.data ?? []).map((t) => [t.id, { reference: t.reference, full_name: t.full_name }])
   );
@@ -86,29 +119,39 @@ async function getInvoicesData() {
     tenants: tenantsRes.data ?? [],
     contacts: contactsRes.data ?? [],
     companyId,
+    totalCount: count,
+    page,
+    pageSize,
   };
 }
 
-export default async function InvoicesPage() {
+export default async function InvoicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<InvoicesSearchParams>;
+}) {
+  const params = await searchParams;
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Invoices</h2>
-        <p className="text-muted-foreground">
-          Manage invoices and track payments
-        </p>
-      </div>
+    <ErrorBoundary>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Invoices</h2>
+          <p className="text-muted-foreground">
+            Manage invoices and track payments
+          </p>
+        </div>
 
-      <Suspense fallback={<InvoicesTableSkeleton />}>
-        <InvoicesContent />
-      </Suspense>
-    </div>
+        <Suspense key={JSON.stringify(params)} fallback={<InvoicesTableSkeleton />}>
+          <InvoicesContent params={params} />
+        </Suspense>
+      </div>
+    </ErrorBoundary>
   );
 }
 
-async function InvoicesContent() {
-  const { invoices, companyId, contracts, tenants, contacts } =
-    await getInvoicesData();
+async function InvoicesContent({ params }: { params: InvoicesSearchParams }) {
+  const { invoices, companyId, contracts, tenants, contacts, totalCount, page, pageSize } =
+    await getInvoicesData(params);
 
   if (!companyId) {
     return (
@@ -127,6 +170,14 @@ async function InvoicesContent() {
       contracts={contracts}
       tenants={tenants}
       contacts={contacts}
+      totalCount={totalCount}
+      currentPage={page}
+      pageSize={pageSize}
+      filterParams={{
+        search: params.search ?? "",
+        type: params.type ?? "all",
+        status: params.status ?? "all",
+      }}
     />
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -50,6 +50,7 @@ import {
   inviteUser,
 } from "./actions";
 import type { ProfileRole } from "@/lib/types/supabase";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 const ROLES: ProfileRole[] = ["admin", "manager", "agent", "viewer"];
 
@@ -64,13 +65,20 @@ type InviteForm = z.infer<typeof inviteSchema>;
 interface UsersTableClientProps {
   initialUsers: UserWithProfile[];
   currentUserId: string;
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
 }
 
 export function UsersTableClient({
   initialUsers,
   currentUserId,
+  totalCount,
+  currentPage,
+  pageSize,
 }: UsersTableClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [users, setUsers] = useState(initialUsers);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [roleChangePending, setRoleChangePending] = useState<string | null>(null);
@@ -148,6 +156,14 @@ export function UsersTableClient({
     inviteForm.reset();
     setInviteOpen(false);
     router.refresh();
+  }
+
+  function buildUsersUrl(nextPage: number, nextPageSize: number): string {
+    const sp = new URLSearchParams();
+    if (nextPage > 1) sp.set("page", String(nextPage));
+    if (nextPageSize !== 10) sp.set("pageSize", String(nextPageSize));
+    const q = sp.toString();
+    return q ? `${pathname}?${q}` : pathname;
   }
 
   return (
@@ -247,6 +263,16 @@ export function UsersTableClient({
           </TableBody>
         </Table>
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => router.push(buildUsersUrl(page, pageSize))}
+          onPageSizeChange={(size) => router.push(buildUsersUrl(1, size))}
+        />
+      )}
 
       <Sheet open={inviteOpen} onOpenChange={setInviteOpen}>
         <SheetContent className="sm:max-w-[600px]">

@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import { OperationsDashboardClient } from "@/components/operations/operations-dashboard-client";
 import Link from "next/link";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
 const getOperationsStats = cache(async () => {
   const supabase = await createClient();
@@ -146,26 +147,28 @@ const getOperationsStats = cache(async () => {
 
 export default async function OperationsDashboardPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Operations</h2>
-        <p className="text-muted-foreground">
-          Projects, tasks, maintenance, and operations overview
-        </p>
+    <ErrorBoundary>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Operations</h2>
+          <p className="text-muted-foreground">
+            Projects, tasks, maintenance, and operations overview
+          </p>
+        </div>
+
+        <Suspense fallback={<OperationsStatsSkeleton />}>
+          <OperationsStatsCards />
+        </Suspense>
+
+        <Suspense fallback={<OperationsChartsSkeleton />}>
+          <OperationsCharts />
+        </Suspense>
+
+        <Suspense fallback={<OperationsTablesSkeleton />}>
+          <OperationsTables />
+        </Suspense>
       </div>
-
-      <Suspense fallback={<OperationsStatsSkeleton />}>
-        <OperationsStatsCards />
-      </Suspense>
-
-      <Suspense fallback={<OperationsChartsSkeleton />}>
-        <OperationsCharts />
-      </Suspense>
-
-      <Suspense fallback={<OperationsTablesSkeleton />}>
-        <OperationsTables />
-      </Suspense>
-    </div>
+    </ErrorBoundary>
   );
 }
 

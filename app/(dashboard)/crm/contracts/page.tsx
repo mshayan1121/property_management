@@ -2,8 +2,17 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ContractsTable } from "@/components/crm/contracts-table";
+import { TableSkeleton } from "@/components/shared/table-skeleton";
 
-async function getContractsData() {
+type ContractsSearchParams = {
+  page?: string;
+  pageSize?: string;
+  search?: string;
+  type?: string;
+  status?: string;
+};
+
+async function getContractsData(searchParams: ContractsSearchParams) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -34,34 +43,49 @@ async function getContractsData() {
       deals: [] as { id: string; reference: string | null }[],
       contacts: [] as { id: string; full_name: string }[],
       companyId: "",
+      totalCount: 0,
+      page: 1,
+      pageSize: 10,
     };
   }
 
+  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.pageSize ?? "10", 10) || 10));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const search = (searchParams.search ?? "").trim();
+  const typeFilter = searchParams.type ?? "all";
+  const statusFilter = searchParams.status ?? "all";
+
+  let query = supabase
+    .from("contracts")
+    .select("id, reference, deal_id, contact_id, type, start_date, end_date, value, status, document_url, notes", { count: "exact" })
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false });
+
+  if (search) {
+    query = query.ilike("reference", `%${search}%`);
+  }
+  if (typeFilter !== "all") {
+    query = query.eq("type", typeFilter);
+  }
+  if (statusFilter !== "all") {
+    query = query.eq("status", statusFilter);
+  }
+
   const [contractsRes, dealsRes, contactsRes] = await Promise.all([
-    supabase
-      .from("contracts")
-      .select("id, reference, deal_id, contact_id, type, start_date, end_date, value, status, document_url, notes")
-      .eq("company_id", companyId)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("deals")
-      .select("id, reference")
-      .eq("company_id", companyId),
-    supabase
-      .from("contacts")
-      .select("id, full_name")
-      .eq("company_id", companyId),
+    query.range(from, to),
+    supabase.from("deals").select("id, reference").eq("company_id", companyId),
+    supabase.from("contacts").select("id, full_name").eq("company_id", companyId),
   ]);
 
+  const count = contractsRes.count ?? 0;
   const contactsMap = new Map(
     (contactsRes.data ?? []).map((c) => [c.id, c.full_name])
   );
-
   const contracts = (contractsRes.data ?? []).map((c) => ({
     ...c,
-    contact_name: c.contact_id
-      ? contactsMap.get(c.contact_id) ?? null
-      : null,
+    contact_name: c.contact_id ? contactsMap.get(c.contact_id) ?? null : null,
   }));
 
   return {
@@ -69,10 +93,18 @@ async function getContractsData() {
     deals: dealsRes.data ?? [],
     contacts: contactsRes.data ?? [],
     companyId,
+    totalCount: count,
+    page,
+    pageSize,
   };
 }
 
-export default async function ContractsPage() {
+export default async function ContractsPage({
+  searchParams,
+}: {
+  searchParams: Promise<ContractsSearchParams>;
+}) {
+  const params = await searchParams;
   return (
     <div className="space-y-6">
       <div>
@@ -82,16 +114,16 @@ export default async function ContractsPage() {
         </p>
       </div>
 
-      <Suspense fallback={<ContractsTableSkeleton />}>
-        <ContractsContent />
+      <Suspense key={JSON.stringify(params)} fallback={<TableSkeleton rows={10} columns={8} />}>
+        <ContractsContent params={params} />
       </Suspense>
     </div>
   );
 }
 
-async function ContractsContent() {
-  const { contracts, deals, contacts, companyId } =
-    await getContractsData();
+async function ContractsContent({ params }: { params: ContractsSearchParams }) {
+  const { contracts, deals, contacts, companyId, totalCount, page, pageSize } =
+    await getContractsData(params);
 
   if (!companyId) {
     return (
@@ -109,20 +141,14 @@ async function ContractsContent() {
       companyId={companyId}
       deals={deals}
       contacts={contacts}
+      totalCount={totalCount}
+      currentPage={page}
+      pageSize={pageSize}
+      filterParams={{
+        search: params.search ?? "",
+        type: params.type ?? "all",
+        status: params.status ?? "all",
+      }}
     />
-  );
-}
-
-function ContractsTableSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div className="flex gap-4">
-        <Skeleton className="h-10 flex-1 max-w-sm" />
-        <Skeleton className="h-10 w-[120px]" />
-        <Skeleton className="h-10 w-[120px]" />
-        <Skeleton className="h-10 w-[100px]" />
-      </div>
-      <Skeleton className="h-[400px] w-full" />
-    </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -43,6 +43,7 @@ import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
 import { parseISO, isValid } from "date-fns";
 import { format } from "date-fns";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 const TYPE_COLORS: Record<string, string> = {
   general: "bg-muted text-muted-foreground",
@@ -79,32 +80,59 @@ interface AnnouncementsTableProps {
   initialAnnouncements: AnnouncementRow[];
   companyId: string;
   properties: { id: string; reference: string; name: string }[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; type: string; status: string };
+}
+
+function buildAnnouncementsUrl(params: { page: number; pageSize: number; search: string; type: string; status: string }): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  if (params.search) sp.set("search", params.search);
+  if (params.type !== "all") sp.set("type", params.type);
+  if (params.status !== "all") sp.set("status", params.status);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function AnnouncementsTable({
   initialAnnouncements,
   companyId,
   properties,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: AnnouncementsTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [search, setSearch] = useState(filterParams.search);
+  const [typeFilter, setTypeFilter] = useState<string>(filterParams.type);
+  const [statusFilter, setStatusFilter] = useState<string>(filterParams.status);
   const [addOpen, setAddOpen] = useState(false);
   const [editAnn, setEditAnn] = useState<AnnouncementRow | null>(null);
   const [deleteAnn, setDeleteAnn] = useState<AnnouncementRow | null>(null);
 
   const announcements = initialAnnouncements.filter((a) => !deletedIds.has(a.id));
 
-  const filtered = announcements.filter((a) => {
-    const matchSearch =
-      !search ||
-      a.title.toLowerCase().includes(search.toLowerCase());
-    const matchType = typeFilter === "all" || a.type === typeFilter;
-    const matchStatus = statusFilter === "all" || a.status === statusFilter;
-    return matchSearch && matchType && matchStatus;
-  });
+  const updateUrl = useCallback(
+    (updates: { page?: number; pageSize?: number; search?: string; type?: string; status?: string }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      const searchNext = updates.search ?? search;
+      const typeNext = updates.type ?? typeFilter;
+      const statusNext = updates.status ?? statusFilter;
+      router.push(pathname + buildAnnouncementsUrl({ page, pageSize: pageSizeNext, search: searchNext, type: typeNext, status: statusNext }));
+    },
+    [router, pathname, currentPage, pageSize, search, typeFilter, statusFilter]
+  );
+
+  const handleSearchSubmit = useCallback(() => updateUrl({ page: 1, search }), [updateUrl, search]);
+  const handleTypeChange = useCallback((v: string) => { setTypeFilter(v); updateUrl({ page: 1, type: v }); }, [updateUrl]);
+  const handleStatusChange = useCallback((v: string) => { setStatusFilter(v); updateUrl({ page: 1, status: v }); }, [updateUrl]);
 
   async function handleDelete(ann: AnnouncementRow) {
     const supabase = createClient();
@@ -151,10 +179,12 @@ export function AnnouncementsTable({
               placeholder="Search by title..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+              onBlur={handleSearchSubmit}
               className="pl-9"
             />
           </div>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <Select value={typeFilter} onValueChange={handleTypeChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -166,7 +196,7 @@ export function AnnouncementsTable({
               <SelectItem value="event">Event</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -187,14 +217,14 @@ export function AnnouncementsTable({
       </div>
 
       <div className="rounded-md border">
-        {filtered.length === 0 ? (
+        {announcements.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {announcements.length === 0
+              {totalCount === 0
                 ? "No announcements yet."
                 : "No announcements match your filters."}
             </p>
-            {announcements.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button
                   variant="outline"
@@ -220,7 +250,7 @@ export function AnnouncementsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((a) => (
+              {announcements.map((a) => (
                 <TableRow key={a.id}>
                   <TableCell className="font-medium">{a.title}</TableCell>
                   <TableCell>
@@ -290,6 +320,16 @@ export function AnnouncementsTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

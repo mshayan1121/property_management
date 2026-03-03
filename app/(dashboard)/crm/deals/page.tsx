@@ -2,8 +2,18 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DealsPageClient } from "./page-client";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
-async function getDealsData() {
+type DealsSearchParams = {
+  page?: string;
+  pageSize?: string;
+  search?: string;
+  type?: string;
+  stage?: string;
+  assignee?: string;
+};
+
+async function getDealsData(searchParams: DealsSearchParams) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -33,15 +43,42 @@ async function getDealsData() {
       contacts: [] as { id: string; full_name: string }[],
       profiles: [] as { id: string; full_name: string }[],
       companyId: "",
+      totalCount: 0,
+      page: 1,
+      pageSize: 10,
     };
   }
 
+  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.pageSize ?? "10", 10) || 10));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const search = (searchParams.search ?? "").trim();
+  const typeFilter = searchParams.type ?? "all";
+  const stageFilter = searchParams.stage ?? "all";
+  const assigneeFilter = searchParams.assignee ?? "all";
+
+  let query = supabase
+    .from("deals")
+    .select("id, reference, type, stage, value, commission_amount, payment_type, contact_id, assigned_to, created_at", { count: "exact" })
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false });
+
+  if (search) {
+    query = query.or(`reference.ilike.%${search}%`);
+  }
+  if (typeFilter !== "all") {
+    query = query.eq("type", typeFilter);
+  }
+  if (stageFilter !== "all") {
+    query = query.eq("stage", stageFilter);
+  }
+  if (assigneeFilter !== "all") {
+    query = query.eq("assigned_to", assigneeFilter);
+  }
+
   const [dealsRes, leadsRes, contactsRes, profilesRes] = await Promise.all([
-    supabase
-      .from("deals")
-      .select("id, reference, type, stage, value, commission_amount, payment_type, contact_id, assigned_to, created_at")
-      .eq("company_id", companyId)
-      .order("created_at", { ascending: false }),
+    query.range(from, to),
     supabase
       .from("leads")
       .select("id, full_name")
@@ -56,6 +93,7 @@ async function getDealsData() {
       .eq("company_id", companyId),
   ]);
 
+  const count = dealsRes.count ?? 0;
   const profilesMap = new Map(
     (profilesRes.data ?? []).map((p) => [p.id, p.full_name])
   );
@@ -79,20 +117,30 @@ async function getDealsData() {
     contacts: contactsRes.data ?? [],
     profiles: profilesRes.data ?? [],
     companyId,
+    totalCount: count,
+    page,
+    pageSize,
   };
 }
 
-export default async function DealsPage() {
+export default async function DealsPage({
+  searchParams,
+}: {
+  searchParams: Promise<DealsSearchParams>;
+}) {
+  const params = await searchParams;
   return (
-    <Suspense fallback={<DealsPageSkeleton />}>
-      <DealsContent />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense key={JSON.stringify(params)} fallback={<DealsPageSkeleton />}>
+        <DealsContent params={params} />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 
-async function DealsContent() {
-  const { deals, leads, contacts, profiles, companyId } =
-    await getDealsData();
+async function DealsContent({ params }: { params: DealsSearchParams }) {
+  const { deals, leads, contacts, profiles, companyId, totalCount, page, pageSize } =
+    await getDealsData(params);
 
   if (!companyId) {
     return (
@@ -111,6 +159,15 @@ async function DealsContent() {
       leads={leads}
       contacts={contacts}
       profiles={profiles}
+      totalCount={totalCount}
+      currentPage={page}
+      pageSize={pageSize}
+      filterParams={{
+        search: params.search ?? "",
+        type: params.type ?? "all",
+        stage: params.stage ?? "all",
+        assignee: params.assignee ?? "all",
+      }}
     />
   );
 }

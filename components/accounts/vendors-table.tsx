@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -40,6 +40,7 @@ import { VendorForm } from "./vendor-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 interface VendorRow {
   id: string;
@@ -56,33 +57,58 @@ interface VendorRow {
 interface VendorsTableProps {
   initialVendors: VendorRow[];
   companyId: string;
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; category: string; status: string };
+}
+
+function buildVendorsUrl(params: { page: number; pageSize: number; search: string; category: string; status: string }): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  if (params.search) sp.set("search", params.search);
+  if (params.category !== "all") sp.set("category", params.category);
+  if (params.status !== "all") sp.set("status", params.status);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function VendorsTable({
   initialVendors,
   companyId,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: VendorsTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [search, setSearch] = useState(filterParams.search);
+  const [categoryFilter, setCategoryFilter] = useState<string>(filterParams.category);
+  const [statusFilter, setStatusFilter] = useState<string>(filterParams.status);
   const [addOpen, setAddOpen] = useState(false);
   const [editVendor, setEditVendor] = useState<VendorRow | null>(null);
   const [deleteVendor, setDeleteVendor] = useState<VendorRow | null>(null);
 
   const vendors = initialVendors.filter((v) => !deletedIds.has(v.id));
 
-  const filteredVendors = vendors.filter((v) => {
-    const matchSearch =
-      !search ||
-      v.name.toLowerCase().includes(search.toLowerCase()) ||
-      (v.email?.toLowerCase().includes(search.toLowerCase()) ?? false);
-    const matchCategory =
-      categoryFilter === "all" || v.category === categoryFilter;
-    const matchStatus = statusFilter === "all" || v.status === statusFilter;
-    return matchSearch && matchCategory && matchStatus;
-  });
+  const updateUrl = useCallback(
+    (updates: { page?: number; pageSize?: number; search?: string; category?: string; status?: string }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      const searchNext = updates.search ?? search;
+      const categoryNext = updates.category ?? categoryFilter;
+      const statusNext = updates.status ?? statusFilter;
+      router.push(pathname + buildVendorsUrl({ page, pageSize: pageSizeNext, search: searchNext, category: categoryNext, status: statusNext }));
+    },
+    [router, pathname, currentPage, pageSize, search, categoryFilter, statusFilter]
+  );
+
+  const handleSearchSubmit = useCallback(() => updateUrl({ page: 1, search }), [updateUrl, search]);
+  const handleCategoryChange = useCallback((value: string) => { setCategoryFilter(value); updateUrl({ page: 1, category: value }); }, [updateUrl]);
+  const handleStatusChange = useCallback((value: string) => { setStatusFilter(value); updateUrl({ page: 1, status: value }); }, [updateUrl]);
 
   async function handleDelete(v: VendorRow) {
     const supabase = createClient();
@@ -108,10 +134,12 @@ export function VendorsTable({
               placeholder="Search name, email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+              onBlur={handleSearchSubmit}
               className="pl-9"
             />
           </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <Select value={categoryFilter} onValueChange={handleCategoryChange}>
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
@@ -126,7 +154,7 @@ export function VendorsTable({
               <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -146,14 +174,14 @@ export function VendorsTable({
       </div>
 
       <div className="rounded-md border">
-        {filteredVendors.length === 0 ? (
+        {vendors.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {vendors.length === 0
+              {totalCount === 0
                 ? "No vendors yet. Add your first vendor."
                 : "No vendors match your filters."}
             </p>
-            {vendors.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button
                   variant="outline"
@@ -180,7 +208,7 @@ export function VendorsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredVendors.map((v) => (
+              {vendors.map((v) => (
                 <TableRow key={v.id}>
                   <TableCell className="font-medium">{v.name}</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -236,6 +264,16 @@ export function VendorsTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

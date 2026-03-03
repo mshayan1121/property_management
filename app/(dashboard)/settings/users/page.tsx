@@ -1,9 +1,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getUsersForAdmin } from "./actions";
+import { getUsersForAdminPage } from "./actions";
 import { UsersTableClient } from "./users-table-client";
 
-export default async function SettingsUsersPage() {
+export default async function SettingsUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; pageSize?: string }>;
+}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -15,7 +19,10 @@ export default async function SettingsUsersPage() {
   if (profile?.role !== "admin") {
     redirect("/unauthorized");
   }
-  const users = await getUsersForAdmin();
+  const params = await searchParams;
+  const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(params.pageSize ?? "10", 10) || 10));
+  const { users, totalCount } = await getUsersForAdminPage(page, pageSize);
   return (
     <div className="space-y-6">
       <div>
@@ -27,6 +34,9 @@ export default async function SettingsUsersPage() {
       <UsersTableClient
         initialUsers={users}
         currentUserId={user.id}
+        totalCount={totalCount}
+        currentPage={page}
+        pageSize={pageSize}
       />
     </div>
   );

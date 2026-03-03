@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -42,6 +42,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
 import { logAudit } from "@/lib/audit";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 const METHOD_COLORS: Record<string, string> = {
   cash: "bg-muted",
@@ -63,30 +64,54 @@ interface PaymentsTableProps {
   initialPayments: PaymentRow[];
   companyId: string;
   invoices: { id: string; reference: string }[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; method: string };
+}
+
+function buildPaymentsUrl(params: { page: number; pageSize: number; search: string; method: string }): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  if (params.search) sp.set("search", params.search);
+  if (params.method !== "all") sp.set("method", params.method);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function PaymentsTable({
   initialPayments,
   companyId,
   invoices,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: PaymentsTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
-  const [methodFilter, setMethodFilter] = useState<string>("all");
+  const [search, setSearch] = useState(filterParams.search);
+  const [methodFilter, setMethodFilter] = useState<string>(filterParams.method);
   const [addOpen, setAddOpen] = useState(false);
   const [deletePayment, setDeletePayment] = useState<PaymentRow | null>(null);
 
   const payments = initialPayments.filter((p) => !deletedIds.has(p.id));
 
-  const filteredPayments = payments.filter((p) => {
-    const matchSearch =
-      !search ||
-      p.reference.toLowerCase().includes(search.toLowerCase()) ||
-      (p.invoice_reference?.toLowerCase().includes(search.toLowerCase()) ?? false);
-    const matchMethod = methodFilter === "all" || p.method === methodFilter;
-    return matchSearch && matchMethod;
-  });
+  const updateUrl = useCallback(
+    (updates: { page?: number; pageSize?: number; search?: string; method?: string }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      const searchNext = updates.search ?? search;
+      const methodNext = updates.method ?? methodFilter;
+      router.push(pathname + buildPaymentsUrl({ page, pageSize: pageSizeNext, search: searchNext, method: methodNext }));
+    },
+    [router, pathname, currentPage, pageSize, search, methodFilter]
+  );
+
+  const handleSearchSubmit = useCallback(() => updateUrl({ page: 1, search }), [updateUrl, search]);
+  const handleMethodChange = useCallback((value: string) => { setMethodFilter(value); updateUrl({ page: 1, method: value }); }, [updateUrl]);
 
   async function handleDelete(p: PaymentRow) {
     const supabase = createClient();
@@ -120,10 +145,12 @@ export function PaymentsTable({
               placeholder="Search reference..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+              onBlur={handleSearchSubmit}
               className="pl-9"
             />
           </div>
-          <Select value={methodFilter} onValueChange={setMethodFilter}>
+          <Select value={methodFilter} onValueChange={handleMethodChange}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Method" />
             </SelectTrigger>
@@ -145,14 +172,14 @@ export function PaymentsTable({
       </div>
 
       <div className="rounded-md border">
-        {filteredPayments.length === 0 ? (
+        {payments.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {payments.length === 0
+              {totalCount === 0
                 ? "No payments yet. Add your first payment."
                 : "No payments match your filters."}
             </p>
-            {payments.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button
                   variant="outline"
@@ -178,7 +205,7 @@ export function PaymentsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPayments.map((p) => (
+              {payments.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.reference}</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -217,6 +244,16 @@ export function PaymentsTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

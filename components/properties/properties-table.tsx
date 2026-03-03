@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -41,6 +41,7 @@ import { PropertyForm } from "./property-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 const TYPE_COLORS: Record<string, string> = {
   residential: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
@@ -69,13 +70,28 @@ export interface PropertyRow {
 interface PropertiesTableProps {
   initialProperties: PropertyRow[];
   companyId: string;
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+}
+
+function buildListingsUrl(params: { page: number; pageSize: number }): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function PropertiesTable({
   initialProperties,
   companyId,
+  totalCount,
+  currentPage,
+  pageSize,
 }: PropertiesTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const properties = initialProperties.filter((p) => !deletedIds.has(p.id));
   const [search, setSearch] = useState("");
@@ -91,6 +107,15 @@ export function PropertiesTable({
     setEditProperty(null);
     setDeleteProperty(null);
   }, [router]);
+
+  const updateUrl = useCallback(
+    (updates: { page?: number; pageSize?: number }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      router.push(pathname + buildListingsUrl({ page, pageSize: pageSizeNext }));
+    },
+    [router, pathname, currentPage, pageSize]
+  );
 
   const filtered = properties.filter((p) => {
     const matchSearch =
@@ -161,11 +186,11 @@ export function PropertiesTable({
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {properties.length === 0
+              {totalCount === 0
                 ? "No properties yet. Add your first property to get started."
                 : "No properties match your filters."}
             </p>
-            {properties.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button variant="outline" className="mt-4" onClick={() => setAddOpen(true)}>
                   <Plus className="mr-2 size-4" />
@@ -248,6 +273,16 @@ export function PropertiesTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

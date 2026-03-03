@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -41,6 +41,7 @@ import { AmenityBookingForm } from "./amenity-booking-form";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
@@ -67,6 +68,21 @@ interface AmenityBookingsTableProps {
   companyId: string;
   amenities: { id: string; name: string; property_id: string }[];
   tenants: { id: string; full_name: string; reference: string }[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; status: string; amenity: string };
+}
+
+function buildAmenityBookingsUrl(params: { page: number; pageSize: number; search: string; status: string; amenity: string }): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  if (params.search) sp.set("search", params.search);
+  if (params.status !== "all") sp.set("status", params.status);
+  if (params.amenity !== "all") sp.set("amenity", params.amenity);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function AmenityBookingsTable({
@@ -74,27 +90,38 @@ export function AmenityBookingsTable({
   companyId,
   amenities,
   tenants,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: AmenityBookingsTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [amenityFilter, setAmenityFilter] = useState<string>("all");
+  const [search, setSearch] = useState(filterParams.search);
+  const [statusFilter, setStatusFilter] = useState<string>(filterParams.status);
+  const [amenityFilter, setAmenityFilter] = useState<string>(filterParams.amenity);
   const [addOpen, setAddOpen] = useState(false);
   const [editBooking, setEditBooking] = useState<BookingRow | null>(null);
   const [deleteBooking, setDeleteBooking] = useState<BookingRow | null>(null);
 
   const bookings = initialBookings.filter((b) => !deletedIds.has(b.id));
 
-  const filtered = bookings.filter((b) => {
-    const matchSearch =
-      !search ||
-      b.reference.toLowerCase().includes(search.toLowerCase()) ||
-      (b.tenant_name?.toLowerCase().includes(search.toLowerCase()) ?? false);
-    const matchStatus = statusFilter === "all" || b.status === statusFilter;
-    const matchAmenity = amenityFilter === "all" || b.amenity_id === amenityFilter;
-    return matchSearch && matchStatus && matchAmenity;
-  });
+  const updateUrl = useCallback(
+    (updates: { page?: number; pageSize?: number; search?: string; status?: string; amenity?: string }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      const searchNext = updates.search ?? search;
+      const statusNext = updates.status ?? statusFilter;
+      const amenityNext = updates.amenity ?? amenityFilter;
+      router.push(pathname + buildAmenityBookingsUrl({ page, pageSize: pageSizeNext, search: searchNext, status: statusNext, amenity: amenityNext }));
+    },
+    [router, pathname, currentPage, pageSize, search, statusFilter, amenityFilter]
+  );
+
+  const handleSearchSubmit = useCallback(() => updateUrl({ page: 1, search }), [updateUrl, search]);
+  const handleStatusChange = useCallback((v: string) => { setStatusFilter(v); updateUrl({ page: 1, status: v }); }, [updateUrl]);
+  const handleAmenityChange = useCallback((v: string) => { setAmenityFilter(v); updateUrl({ page: 1, amenity: v }); }, [updateUrl]);
 
   async function handleDelete(booking: BookingRow) {
     const supabase = createClient();
@@ -126,10 +153,12 @@ export function AmenityBookingsTable({
               placeholder="Search by reference or tenant..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+              onBlur={handleSearchSubmit}
               className="pl-9"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -141,7 +170,7 @@ export function AmenityBookingsTable({
             </SelectContent>
           </Select>
           <div className="flex flex-col gap-1">
-            <Select value={amenityFilter} onValueChange={setAmenityFilter}>
+            <Select value={amenityFilter} onValueChange={handleAmenityChange}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Amenity" />
               </SelectTrigger>
@@ -171,14 +200,14 @@ export function AmenityBookingsTable({
       </div>
 
       <div className="rounded-md border">
-        {filtered.length === 0 ? (
+        {bookings.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {bookings.length === 0
+              {totalCount === 0
                 ? "No amenity bookings yet."
                 : "No bookings match your filters."}
             </p>
-            {bookings.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button
                   variant="outline"
@@ -206,7 +235,7 @@ export function AmenityBookingsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((b) => (
+              {bookings.map((b) => (
                 <TableRow key={b.id}>
                   <TableCell className="font-medium">{b.reference}</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -257,6 +286,16 @@ export function AmenityBookingsTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

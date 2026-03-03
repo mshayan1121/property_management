@@ -54,6 +54,53 @@ export async function getUsersForAdmin(): Promise<UserWithProfile[]> {
   });
 }
 
+export async function getUsersForAdminPage(
+  page: number,
+  pageSize: number
+): Promise<{ users: UserWithProfile[]; totalCount: number }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, company_id")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role !== "admin") {
+    redirect("/unauthorized");
+  }
+  const admin = createAdminClient();
+  const companyId = profile.company_id;
+  if (!companyId) {
+    return { users: [], totalCount: 0 };
+  }
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const { data: profiles, count } = await admin
+    .from("profiles")
+    .select("id, full_name, role, created_at, status", { count: "exact" })
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false })
+    .range(from, to);
+  const { data: authUsers } = await admin.auth.admin.listUsers({ perPage: 1000 });
+  const users = authUsers?.users ?? [];
+  const usersById = new Map(users.map((u: { id: string; email?: string }) => [u.id, u]));
+  const userList = (profiles ?? []).map((p: { id: string; full_name: string; role: ProfileRole; created_at: string; status?: string }) => {
+    const authUser = usersById.get(p.id);
+    return {
+      id: p.id,
+      email: authUser?.email ?? null,
+      full_name: p.full_name,
+      role: p.role,
+      created_at: p.created_at,
+      status: p.status ?? "active",
+    };
+  });
+  return { users: userList, totalCount: count ?? 0 };
+}
+
 export async function updateUserRole(profileId: string, newRole: ProfileRole) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

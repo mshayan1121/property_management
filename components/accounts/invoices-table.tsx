@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   Table,
@@ -43,6 +43,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
 import { logAudit } from "@/lib/audit";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -75,6 +76,21 @@ interface InvoicesTableProps {
   contracts: { id: string; reference: string | null }[];
   tenants: { id: string; reference: string; full_name: string }[];
   contacts: { id: string; full_name: string }[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; type: string; status: string };
+}
+
+function buildInvoicesUrl(params: { page: number; pageSize: number; search: string; type: string; status: string }): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  if (params.search) sp.set("search", params.search);
+  if (params.type !== "all") sp.set("type", params.type);
+  if (params.status !== "all") sp.set("status", params.status);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function InvoicesTable({
@@ -83,28 +99,54 @@ export function InvoicesTable({
   contracts,
   tenants,
   contacts,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: InvoicesTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [search, setSearch] = useState(filterParams.search);
+  const [typeFilter, setTypeFilter] = useState<string>(filterParams.type);
+  const [statusFilter, setStatusFilter] = useState<string>(filterParams.status);
   const [addOpen, setAddOpen] = useState(false);
   const [editInvoice, setEditInvoice] = useState<InvoiceRow | null>(null);
   const [deleteInvoice, setDeleteInvoice] = useState<InvoiceRow | null>(null);
 
   const invoices = initialInvoices.filter((i) => !deletedIds.has(i.id));
 
-  const filteredInvoices = invoices.filter((inv) => {
-    const matchSearch =
-      !search ||
-      inv.reference.toLowerCase().includes(search.toLowerCase()) ||
-      (inv.tenant_name?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
-      (inv.contact_name?.toLowerCase().includes(search.toLowerCase()) ?? false);
-    const matchType = typeFilter === "all" || inv.type === typeFilter;
-    const matchStatus = statusFilter === "all" || inv.status === statusFilter;
-    return matchSearch && matchType && matchStatus;
-  });
+  const updateUrl = useCallback(
+    (updates: { page?: number; pageSize?: number; search?: string; type?: string; status?: string }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      const searchNext = updates.search ?? search;
+      const typeNext = updates.type ?? typeFilter;
+      const statusNext = updates.status ?? statusFilter;
+      router.push(pathname + buildInvoicesUrl({ page, pageSize: pageSizeNext, search: searchNext, type: typeNext, status: statusNext }));
+    },
+    [router, pathname, currentPage, pageSize, search, typeFilter, statusFilter]
+  );
+
+  const handleSearchSubmit = useCallback(() => {
+    updateUrl({ page: 1, search });
+  }, [updateUrl, search]);
+
+  const handleTypeChange = useCallback(
+    (value: string) => {
+      setTypeFilter(value);
+      updateUrl({ page: 1, type: value });
+    },
+    [updateUrl]
+  );
+
+  const handleStatusChange = useCallback(
+    (value: string) => {
+      setStatusFilter(value);
+      updateUrl({ page: 1, status: value });
+    },
+    [updateUrl]
+  );
 
   async function handleDelete(inv: InvoiceRow) {
     const supabase = createClient();
@@ -156,10 +198,12 @@ export function InvoicesTable({
               placeholder="Search reference, contact..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+              onBlur={handleSearchSubmit}
               className="pl-9"
             />
           </div>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <Select value={typeFilter} onValueChange={handleTypeChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -171,7 +215,7 @@ export function InvoicesTable({
               <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -194,14 +238,14 @@ export function InvoicesTable({
       </div>
 
       <div className="rounded-md border">
-        {filteredInvoices.length === 0 ? (
+        {invoices.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {invoices.length === 0
+              {totalCount === 0
                 ? "No invoices yet. Add your first invoice to get started."
                 : "No invoices match your filters."}
             </p>
-            {invoices.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button
                   variant="outline"
@@ -230,7 +274,7 @@ export function InvoicesTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInvoices.map((inv) => (
+              {invoices.map((inv) => (
                 <TableRow key={inv.id}>
                   <TableCell className="font-medium">
                     <Link
@@ -308,6 +352,16 @@ export function InvoicesTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

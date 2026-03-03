@@ -3,21 +3,10 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useRole } from "@/hooks/use-role";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
 
 export default function UnauthorizedPage() {
-  const { role, loading } = useRole();
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-4 w-48" />
-        <Skeleton className="h-10 w-40" />
-      </div>
-    );
-  }
+  const { role } = useRole();
 
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-6 text-center">

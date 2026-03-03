@@ -36,7 +36,7 @@ async function getProjectDetail(projectId: string) {
 
   const { data: project, error: projError } = await supabase
     .from("projects")
-    .select("*")
+    .select("id, reference, name, description, property_id, category, priority, status, start_date, due_date, budget, assigned_to")
     .eq("id", projectId)
     .eq("company_id", companyId)
     .single();

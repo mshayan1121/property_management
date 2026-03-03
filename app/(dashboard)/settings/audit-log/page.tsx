@@ -3,12 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { AuditLogClient } from "./audit-log-client";
 import { format } from "date-fns";
 
-const PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 10;
 
 export default async function AuditLogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ action?: string; resource_type?: string; from?: string; to?: string; q?: string; page?: string }>;
+  searchParams: Promise<{ action?: string; resource_type?: string; from?: string; to?: string; q?: string; page?: string; pageSize?: string }>;
 }) {
   const supabase = await createClient();
   const {
@@ -33,6 +33,7 @@ export default async function AuditLogPage({
   const to = params.to ?? "";
   const q = (params.q ?? "").trim();
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
+  const pageSize = Math.min(100, Math.max(1, parseInt(params.pageSize ?? String(DEFAULT_PAGE_SIZE), 10) || DEFAULT_PAGE_SIZE));
 
   let query = supabase
     .from("audit_logs")
@@ -48,8 +49,8 @@ export default async function AuditLogPage({
     query = query.or(`user_email.ilike.%${q}%,resource_reference.ilike.%${q}%`);
   }
 
-  const fromRow = (page - 1) * PAGE_SIZE;
-  query = query.range(fromRow, fromRow + PAGE_SIZE - 1);
+  const fromRow = (page - 1) * pageSize;
+  query = query.range(fromRow, fromRow + pageSize - 1);
 
   const { data: rows, error, count } = await query;
 
@@ -62,7 +63,6 @@ export default async function AuditLogPage({
     );
   }
 
-  const totalPages = count != null ? Math.ceil(count / PAGE_SIZE) : 0;
   const items = (rows ?? []).map((r) => ({
     id: r.id,
     action: r.action,
@@ -83,8 +83,8 @@ export default async function AuditLogPage({
       <AuditLogClient
         items={items}
         totalCount={count ?? 0}
-        totalPages={totalPages}
         currentPage={page}
+        pageSize={pageSize}
         filters={{ action, resource_type: resourceType, from, to, q }}
       />
     </div>

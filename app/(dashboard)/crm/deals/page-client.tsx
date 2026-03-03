@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutGrid, List, BarChart3, Calendar } from "lucide-react";
 import { DealsKanban } from "@/components/crm/deals-kanban";
@@ -25,6 +26,10 @@ interface DealsPageClientProps {
   leads: { id: string; full_name: string }[];
   contacts: { id: string; full_name: string }[];
   profiles: { id: string; full_name: string }[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; type: string; stage: string; assignee: string };
 }
 
 export function DealsPageClient({
@@ -33,6 +38,10 @@ export function DealsPageClient({
   leads,
   contacts,
   profiles,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: DealsPageClientProps) {
   const dealsByStage = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -59,10 +68,7 @@ export function DealsPageClient({
     const byMonth: Record<string, number> = {};
     deals.forEach((d) => {
       const date = new Date(d.created_at);
-      const key = date.toLocaleDateString("en-GB", {
-        month: "short",
-        year: "numeric",
-      });
+      const key = format(date, "MMM yyyy");
       byMonth[key] = (byMonth[key] ?? 0) + d.value;
     });
     return Object.entries(byMonth)
@@ -147,6 +153,10 @@ export function DealsPageClient({
             leads={leads}
             contacts={contacts}
             profiles={profiles}
+            totalCount={totalCount}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            filterParams={filterParams}
           />
         </TabsContent>
         <TabsContent value="chart">

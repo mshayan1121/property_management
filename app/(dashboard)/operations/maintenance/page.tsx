@@ -2,6 +2,17 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MaintenanceTable } from "@/components/operations/maintenance-table";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
+
+type MaintenanceSearchParams = {
+  page?: string;
+  pageSize?: string;
+  search?: string;
+  status?: string;
+  category?: string;
+  priority?: string;
+  property?: string;
+};
 
 type MaintenanceRow = {
   id: string;
@@ -22,7 +33,7 @@ type MaintenanceRow = {
   actual_cost: number;
 };
 
-async function getMaintenanceData() {
+async function getMaintenanceData(searchParams: MaintenanceSearchParams) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -42,34 +53,46 @@ async function getMaintenanceData() {
       tenants: [] as { id: string; full_name: string; reference: string }[],
       profiles: [] as { id: string; full_name: string }[],
       companyId: "",
+      totalCount: 0,
+      page: 1,
+      pageSize: 10,
     };
   }
 
+  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.pageSize ?? "10", 10) || 10));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const search = (searchParams.search ?? "").trim();
+  const statusFilter = searchParams.status ?? "all";
+  const categoryFilter = searchParams.category ?? "all";
+  const priorityFilter = searchParams.priority ?? "all";
+  const propertyFilter = searchParams.property ?? "all";
+
+  let query = supabase
+    .from("maintenance_requests")
+    .select("id, reference, title, description, property_id, unit_id, tenant_id, category, priority, status, assigned_to, estimated_cost, actual_cost", { count: "exact" })
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false });
+
+  if (search) {
+    query = query.or(`title.ilike.%${search}%,reference.ilike.%${search}%`);
+  }
+  if (statusFilter !== "all") query = query.eq("status", statusFilter);
+  if (categoryFilter !== "all") query = query.eq("category", categoryFilter);
+  if (priorityFilter !== "all") query = query.eq("priority", priorityFilter);
+  if (propertyFilter !== "all") query = query.eq("property_id", propertyFilter);
+
   const [requestsRes, propertiesRes, unitsRes, tenantsRes, profilesRes] =
     await Promise.all([
-      supabase
-        .from("maintenance_requests")
-        .select("id, reference, title, description, property_id, unit_id, tenant_id, category, priority, status, assigned_to, estimated_cost, actual_cost")
-        .eq("company_id", companyId)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("properties")
-        .select("id, reference, name")
-        .eq("company_id", companyId),
-      supabase
-        .from("units")
-        .select("id, unit_number, property_id")
-        .eq("company_id", companyId),
-      supabase
-        .from("tenants")
-        .select("id, full_name, reference")
-        .eq("company_id", companyId),
-      supabase
-        .from("profiles")
-        .select("id, full_name")
-        .eq("company_id", companyId),
+      query.range(from, to),
+      supabase.from("properties").select("id, reference, name").eq("company_id", companyId),
+      supabase.from("units").select("id, unit_number, property_id").eq("company_id", companyId),
+      supabase.from("tenants").select("id, full_name, reference").eq("company_id", companyId),
+      supabase.from("profiles").select("id, full_name").eq("company_id", companyId),
     ]);
 
+  const count = requestsRes.count ?? 0;
   const propertiesMap = new Map(
     (propertiesRes.data ?? []).map((p) => [p.id, p.name])
   );
@@ -100,6 +123,9 @@ async function getMaintenanceData() {
     })),
     profiles: profilesRes.data ?? [],
     companyId,
+    totalCount: count,
+    page,
+    pageSize,
   };
 }
 
@@ -115,26 +141,33 @@ function MaintenanceTableSkeleton() {
   );
 }
 
-export default async function MaintenancePage() {
+export default async function MaintenancePage({
+  searchParams,
+}: {
+  searchParams: Promise<MaintenanceSearchParams>;
+}) {
+  const params = await searchParams;
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">
-          Maintenance Requests
-        </h2>
-        <p className="text-muted-foreground">
-          Track and manage maintenance requests
-        </p>
-      </div>
+    <ErrorBoundary>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Maintenance Requests
+          </h2>
+          <p className="text-muted-foreground">
+            Track and manage maintenance requests
+          </p>
+        </div>
 
-      <Suspense fallback={<MaintenanceTableSkeleton />}>
-        <MaintenanceContent />
-      </Suspense>
-    </div>
+        <Suspense key={JSON.stringify(params)} fallback={<MaintenanceTableSkeleton />}>
+          <MaintenanceContent params={params} />
+        </Suspense>
+      </div>
+    </ErrorBoundary>
   );
 }
 
-async function MaintenanceContent() {
+async function MaintenanceContent({ params }: { params: MaintenanceSearchParams }) {
   const {
     requests,
     companyId,
@@ -142,7 +175,10 @@ async function MaintenanceContent() {
     units,
     tenants,
     profiles,
-  } = await getMaintenanceData();
+    totalCount,
+    page,
+    pageSize,
+  } = await getMaintenanceData(params);
 
   if (!companyId) {
     return (
@@ -162,6 +198,16 @@ async function MaintenanceContent() {
       units={units}
       tenants={tenants}
       profiles={profiles}
+      totalCount={totalCount}
+      currentPage={page}
+      pageSize={pageSize}
+      filterParams={{
+        search: params.search ?? "",
+        status: params.status ?? "all",
+        category: params.category ?? "all",
+        priority: params.priority ?? "all",
+        property: params.property ?? "all",
+      }}
     />
   );
 }

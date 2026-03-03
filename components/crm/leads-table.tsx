@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -36,7 +36,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { LeadForm } from "./lead-form";
@@ -44,6 +43,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
 import { logAudit } from "@/lib/audit";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 const STATUS_COLORS: Record<string, string> = {
   new: "bg-muted text-muted-foreground",
@@ -69,23 +69,90 @@ interface LeadsTableProps {
   initialLeads: Lead[];
   profiles: { id: string; full_name: string }[];
   companyId: string;
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; source: string; status: string };
+}
+
+function buildLeadsUrl(params: {
+  page: number;
+  pageSize: number;
+  search: string;
+  source: string;
+  status: string;
+}): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  if (params.search) sp.set("search", params.search);
+  if (params.source !== "all") sp.set("source", params.source);
+  if (params.status !== "all") sp.set("status", params.status);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function LeadsTable({
   initialLeads,
   profiles,
   companyId,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: LeadsTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const leads = initialLeads.filter((l) => !deletedIds.has(l.id));
-  const [search, setSearch] = useState("");
-  const [sourceFilter, setSourceFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [search, setSearch] = useState(filterParams.search);
+  const [sourceFilter, setSourceFilter] = useState<string>(filterParams.source);
+  const [statusFilter, setStatusFilter] = useState<string>(filterParams.status);
   const [addOpen, setAddOpen] = useState(false);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [deleteLead, setDeleteLead] = useState<Lead | null>(null);
+
+  const leads = initialLeads.filter((l) => !deletedIds.has(l.id));
+
+  const updateUrl = useCallback(
+    (updates: {
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      source?: string;
+      status?: string;
+    }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      const searchNext = updates.search ?? search;
+      const sourceNext = updates.source ?? sourceFilter;
+      const statusNext = updates.status ?? statusFilter;
+      router.push(
+        pathname + buildLeadsUrl({ page, pageSize: pageSizeNext, search: searchNext, source: sourceNext, status: statusNext })
+      );
+    },
+    [router, pathname, currentPage, pageSize, search, sourceFilter, statusFilter]
+  );
+
+  const handleSearchSubmit = useCallback(() => {
+    updateUrl({ page: 1, search });
+  }, [updateUrl, search]);
+
+  const handleSourceChange = useCallback(
+    (value: string) => {
+      setSourceFilter(value);
+      updateUrl({ page: 1, source: value });
+    },
+    [updateUrl]
+  );
+
+  const handleStatusChange = useCallback(
+    (value: string) => {
+      setStatusFilter(value);
+      updateUrl({ page: 1, status: value });
+    },
+    [updateUrl]
+  );
 
   const refresh = useCallback(() => {
     router.refresh();
@@ -94,19 +161,6 @@ export function LeadsTable({
     setEditLead(null);
     setDeleteLead(null);
   }, [router]);
-
-  const filteredLeads = leads.filter((lead) => {
-    const matchSearch =
-      !search ||
-      lead.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      (lead.email?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
-      (lead.phone?.includes(search) ?? false);
-    const matchSource =
-      sourceFilter === "all" || lead.source === sourceFilter;
-    const matchStatus =
-      statusFilter === "all" || lead.status === statusFilter;
-    return matchSearch && matchSource && matchStatus;
-  });
 
   async function handleDelete(lead: Lead) {
     const supabase = createClient();
@@ -139,10 +193,12 @@ export function LeadsTable({
               placeholder="Search by name, email, phone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+              onBlur={handleSearchSubmit}
               className="pl-9"
             />
           </div>
-          <Select value={sourceFilter} onValueChange={setSourceFilter}>
+          <Select value={sourceFilter} onValueChange={handleSourceChange}>
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Source" />
             </SelectTrigger>
@@ -155,7 +211,7 @@ export function LeadsTable({
               <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -177,14 +233,14 @@ export function LeadsTable({
       </div>
 
       <div className="rounded-md border">
-        {filteredLeads.length === 0 ? (
+        {leads.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {leads.length === 0
+              {totalCount === 0
                 ? "No leads yet. Add your first lead to get started."
                 : "No leads match your filters."}
             </p>
-            {leads.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button
                   variant="outline"
@@ -212,7 +268,7 @@ export function LeadsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredLeads.map((lead) => (
+              {leads.map((lead) => (
                 <TableRow
                   key={lead.id}
                   className="cursor-pointer"
@@ -279,6 +335,16 @@ export function LeadsTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

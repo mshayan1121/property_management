@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -43,6 +43,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/shared/permission-gate";
 import { logAudit } from "@/lib/audit";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 
 interface Contact {
   id: string;
@@ -57,32 +58,63 @@ interface Contact {
 interface ContactsTableProps {
   initialContacts: Contact[];
   companyId: string;
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  filterParams: { search: string; type: string };
+}
+
+function buildContactsUrl(params: { page: number; pageSize: number; search: string; type: string }): string {
+  const sp = new URLSearchParams();
+  if (params.page > 1) sp.set("page", String(params.page));
+  if (params.pageSize !== 10) sp.set("pageSize", String(params.pageSize));
+  if (params.search) sp.set("search", params.search);
+  if (params.type !== "all") sp.set("type", params.type);
+  const q = sp.toString();
+  return q ? `?${q}` : "";
 }
 
 export function ContactsTable({
   initialContacts,
   companyId,
+  totalCount,
+  currentPage,
+  pageSize,
+  filterParams,
 }: ContactsTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [search, setSearch] = useState(filterParams.search);
+  const [typeFilter, setTypeFilter] = useState<string>(filterParams.type);
   const [addOpen, setAddOpen] = useState(false);
   const [editContact, setEditContact] = useState<Contact | null>(null);
   const [deleteContact, setDeleteContact] = useState<Contact | null>(null);
 
   const contacts = initialContacts.filter((c) => !deletedIds.has(c.id));
 
-  const filteredContacts = contacts.filter((contact) => {
-    const matchSearch =
-      !search ||
-      contact.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      (contact.email?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
-      (contact.phone?.includes(search) ?? false);
-    const matchType =
-      typeFilter === "all" || contact.type === typeFilter;
-    return matchSearch && matchType;
-  });
+  const updateUrl = useCallback(
+    (updates: { page?: number; pageSize?: number; search?: string; type?: string }) => {
+      const page = updates.page ?? currentPage;
+      const pageSizeNext = updates.pageSize ?? pageSize;
+      const searchNext = updates.search ?? search;
+      const typeNext = updates.type ?? typeFilter;
+      router.push(pathname + buildContactsUrl({ page, pageSize: pageSizeNext, search: searchNext, type: typeNext }));
+    },
+    [router, pathname, currentPage, pageSize, search, typeFilter]
+  );
+
+  const handleSearchSubmit = useCallback(() => {
+    updateUrl({ page: 1, search });
+  }, [updateUrl, search]);
+
+  const handleTypeChange = useCallback(
+    (value: string) => {
+      setTypeFilter(value);
+      updateUrl({ page: 1, type: value });
+    },
+    [updateUrl]
+  );
 
   async function handleDelete(contact: Contact) {
     const supabase = createClient();
@@ -119,10 +151,12 @@ export function ContactsTable({
               placeholder="Search by name, email, phone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+              onBlur={handleSearchSubmit}
               className="pl-9"
             />
           </div>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <Select value={typeFilter} onValueChange={handleTypeChange}>
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -144,14 +178,14 @@ export function ContactsTable({
       </div>
 
       <div className="rounded-md border">
-        {filteredContacts.length === 0 ? (
+        {contacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-              {contacts.length === 0
+              {totalCount === 0
                 ? "No contacts yet. Add your first contact to get started."
                 : "No contacts match your filters."}
             </p>
-            {contacts.length === 0 && (
+            {totalCount === 0 && (
               <PermissionGate permission="canCreate">
                 <Button
                   variant="outline"
@@ -177,7 +211,7 @@ export function ContactsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredContacts.map((contact) => (
+              {contacts.map((contact) => (
                 <TableRow key={contact.id}>
                   <TableCell className="font-medium">{contact.full_name}</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -224,6 +258,16 @@ export function ContactsTable({
           </Table>
         )}
       </div>
+
+      {totalCount > 0 && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={(page) => updateUrl({ page })}
+          onPageSizeChange={(size) => updateUrl({ page: 1, pageSize: size })}
+        />
+      )}
 
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-[600px]">

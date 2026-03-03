@@ -4,6 +4,15 @@ import { createClient } from "@/lib/supabase/server";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { AmenityBookingsTable } from "@/components/operations/amenity-bookings-table";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
+
+type AmenityBookingsSearchParams = {
+  page?: string;
+  pageSize?: string;
+  search?: string;
+  status?: string;
+  amenity?: string;
+};
 
 type BookingRow = {
   id: string;
@@ -19,7 +28,7 @@ type BookingRow = {
   notes: string | null;
 };
 
-async function getAmenityBookingsData() {
+async function getAmenityBookingsData(searchParams: AmenityBookingsSearchParams) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -37,25 +46,39 @@ async function getAmenityBookingsData() {
       amenities: [] as { id: string; name: string; property_id: string }[],
       tenants: [] as { id: string; full_name: string; reference: string }[],
       companyId: "",
+      totalCount: 0,
+      page: 1,
+      pageSize: 10,
     };
   }
 
+  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.pageSize ?? "10", 10) || 10));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const search = (searchParams.search ?? "").trim();
+  const statusFilter = searchParams.status ?? "all";
+
+  let query = supabase
+    .from("amenity_bookings")
+    .select("id, reference, amenity_id, tenant_id, booking_date, start_time, end_time, status, notes", { count: "exact" })
+    .eq("company_id", companyId)
+    .order("booking_date", { ascending: false });
+
+  if (search) {
+    query = query.or(`reference.ilike.%${search}%`);
+  }
+  if (statusFilter !== "all") query = query.eq("status", statusFilter);
+  const amenityFilter = searchParams.amenity ?? "all";
+  if (amenityFilter !== "all") query = query.eq("amenity_id", amenityFilter);
+
   const [bookingsRes, amenitiesRes, tenantsRes] = await Promise.all([
-    supabase
-      .from("amenity_bookings")
-      .select("id, reference, amenity_id, tenant_id, booking_date, start_time, end_time, status, notes")
-      .eq("company_id", companyId)
-      .order("booking_date", { ascending: false }),
-    supabase
-      .from("amenities")
-      .select("id, name, property_id")
-      .eq("company_id", companyId),
-    supabase
-      .from("tenants")
-      .select("id, full_name, reference")
-      .eq("company_id", companyId),
+    query.range(from, to),
+    supabase.from("amenities").select("id, name, property_id").eq("company_id", companyId),
+    supabase.from("tenants").select("id, full_name, reference").eq("company_id", companyId),
   ]);
 
+  const count = bookingsRes.count ?? 0;
   const amenitiesMap = new Map(
     (amenitiesRes.data ?? []).map((a) => [a.id, a.name])
   );
@@ -78,6 +101,9 @@ async function getAmenityBookingsData() {
       reference: t.reference,
     })),
     companyId,
+    totalCount: count,
+    page,
+    pageSize,
   };
 }
 
@@ -93,26 +119,33 @@ function AmenityBookingsTableSkeleton() {
   );
 }
 
-export default async function AmenityBookingsPage() {
+export default async function AmenityBookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<AmenityBookingsSearchParams>;
+}) {
+  const params = await searchParams;
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Amenity Bookings</h2>
-        <p className="text-muted-foreground">
-          Manage amenity bookings for tenants
-        </p>
-      </div>
+    <ErrorBoundary>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Amenity Bookings</h2>
+          <p className="text-muted-foreground">
+            Manage amenity bookings for tenants
+          </p>
+        </div>
 
-      <Suspense fallback={<AmenityBookingsTableSkeleton />}>
-        <AmenityBookingsContent />
-      </Suspense>
-    </div>
+        <Suspense key={JSON.stringify(params)} fallback={<AmenityBookingsTableSkeleton />}>
+          <AmenityBookingsContent params={params} />
+        </Suspense>
+      </div>
+    </ErrorBoundary>
   );
 }
 
-async function AmenityBookingsContent() {
-  const { bookings, companyId, amenities, tenants } =
-    await getAmenityBookingsData();
+async function AmenityBookingsContent({ params }: { params: AmenityBookingsSearchParams }) {
+  const { bookings, companyId, amenities, tenants, totalCount, page, pageSize } =
+    await getAmenityBookingsData(params);
 
   if (!companyId) {
     return (
@@ -144,6 +177,14 @@ async function AmenityBookingsContent() {
       companyId={companyId}
       amenities={amenities}
       tenants={tenants}
+      totalCount={totalCount}
+      currentPage={page}
+      pageSize={pageSize}
+      filterParams={{
+        search: params.search ?? "",
+        status: params.status ?? "all",
+        amenity: params.amenity ?? "all",
+      }}
     />
   );
 }

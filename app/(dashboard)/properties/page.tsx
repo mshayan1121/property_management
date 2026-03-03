@@ -13,6 +13,7 @@ import { PropertiesDashboardClient } from "@/components/properties/properties-da
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
 const getPropertyStats = cache(async () => {
   const supabase = await createClient();
@@ -126,26 +127,28 @@ const getPropertyStats = cache(async () => {
 
 export default async function PropertiesDashboardPage() {
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Properties</h2>
-          <p className="text-muted-foreground">Property management at a glance</p>
+    <ErrorBoundary>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Properties</h2>
+            <p className="text-muted-foreground">Property management at a glance</p>
+          </div>
         </div>
-      </div>
 
-      <Suspense fallback={<PropertiesStatsSkeleton />}>
-        <PropertiesStatsCards />
-      </Suspense>
+        <Suspense fallback={<PropertiesStatsSkeleton />}>
+          <PropertiesStatsCards />
+        </Suspense>
 
-      <Suspense fallback={<PropertiesChartsSkeleton />}>
-        <PropertiesCharts />
-      </Suspense>
+        <Suspense fallback={<PropertiesChartsSkeleton />}>
+          <PropertiesCharts />
+        </Suspense>
 
       <Suspense fallback={<RecentPropertiesSkeleton />}>
         <RecentPropertiesTable />
       </Suspense>
     </div>
+    </ErrorBoundary>
   );
 }
 
