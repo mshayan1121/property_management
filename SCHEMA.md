@@ -1,7 +1,7 @@
 # Database Schema
 
 ## Status
-Being built phase by phase. Updated after each phase is complete.
+Updated 03/03/2026. All phases 1–8 applied. RLS DELETE policies and FK behaviour for leads/deals updated.
 
 ## Phase 1 Tables (Foundation)
 
@@ -14,6 +14,7 @@ Being built phase by phase. Updated after each phase is complete.
 | role | text | admin, manager, agent, viewer |
 | company_id | uuid | FK to companies |
 | status | text | active, inactive (default: active) |
+| must_change_password | boolean | default false (force change on first login) |
 | created_at | timestamptz | |
 | updated_at | timestamptz | |
 
@@ -57,7 +58,7 @@ Being built phase by phase. Updated after each phase is complete.
 ### deals
 - id: uuid PK
 - reference: text unique (DEAL-000001)
-- lead_id: uuid FK leads nullable
+- lead_id: uuid FK leads ON DELETE SET NULL nullable
 - contact_id: uuid FK contacts nullable
 - type: text (sale/rental)
 - stage: text (qualified/viewed/negotiation/contract_draft/contract_signed)
@@ -96,7 +97,7 @@ Being built phase by phase. Updated after each phase is complete.
 - created_at: timestamptz
 - updated_at: timestamptz
 
-RLS enabled on all Phase 2 tables. Company-based policies: users only see their company's data.
+RLS enabled on all Phase 2 tables. Company-based + role-based: admin/manager see all in company; agents see own (leads/deals by assigned_to). DELETE: admin/manager can delete any in company; agents can delete own leads/deals only. deals.lead_id: ON DELETE SET NULL so leads can be deleted when linked to deals.
 
 ## Phase 3 Tables (Property Management)
 

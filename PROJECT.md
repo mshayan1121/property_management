@@ -5,6 +5,9 @@ A full-stack property management platform for Shaun Daswani's company.
 Replicates PropExcel functionality for internal use.
 Dubai/UAE focused with AED currency and VAT compliance.
 
+## Current status (03/03/2026)
+Phases 1–8 complete. App is in **Shaun testing phase**. Pending: bug fixes from feedback, Phase 9 deployment, Phase 11 AI features.
+
 ## Stack
 - Next.js 16.1 (App Router, TypeScript)
 - Supabase (database, auth, storage)

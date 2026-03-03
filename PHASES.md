@@ -20,7 +20,7 @@ Status: ✅ Complete
 
 ### Features
 - Leads (add, edit, delete, list, filter by source/status)
-- Deals (add, edit, delete)
+- Deals (add, edit, delete — list view and kanban card menu, with confirmation)
 - Deal pipeline views: Kanban, List, Timeline, Chart
 - Deal stages: Qualified → Viewed → Negotiation → Contract Draft → Contract Signed
 - Commission calculation per deal
@@ -132,6 +132,7 @@ Status: ✅ Complete
 - Environment variable audit (lib/env.ts)
 - API route protection review
 - RLS policy review
+- RLS DELETE policies fixed (admin/manager + agent own for leads/deals; admin/manager for all other tables)
 - Security rules in .cursorrules
 - Recharts width/height warnings fixed
 
@@ -150,16 +151,18 @@ Status: ✅ Complete
 ---
 
 ## Phase 9 — Deployment & Handoff
-Status: In Progress
+Status: In Progress (Shaun testing phase as of 03/03/2026)
 
 ### Features
 - Delete test data
-- Final testing
+- Final testing (including bug fixes from Shaun feedback)
 - Deploy to Vercel
 - Hand off to Shaun
 
 ---
-- AI features
+
+## Future phases (not started)
+- Phase 11: AI features
 - Tenant self-service portal
 - Mobile app
 - Multi-company/SaaS mode

@@ -162,11 +162,25 @@ Completed: 03/03/2026
 - [x] Role loading refactored to server-side (no delay)
 - [x] Fixed Recharts width/height warnings
 
+## Recent bug fixes (03/03/2026)
+- [x] Fixed RLS DELETE policies across all tables (leads, deals, contacts, contracts, properties, units, tenants, invoices, bills, payments, pdcs, vendors, projects, tasks, maintenance_requests, work_orders, inventory_items, amenity_bookings, announcements)
+- [x] Fixed lead delete: deals.lead_id FK set to ON DELETE SET NULL so leads can be deleted when linked to deals
+- [x] Added deal delete: delete button in list view and kanban card menu, with confirmation dialog and deleteDeal server action
+- [x] Fixed login loading state
+- [x] Fixed PermissionGate button delay (role loaded server-side, no client flash)
+
 ## Phase 9 — Deployment & Handoff
 Status: In Progress
 
-### In Progress
+### Current status
+App is in **Shaun testing phase**. Phases 1–8 complete; awaiting bug fixes from Shaun feedback.
+
+### Pending
+- [ ] Bug fixes from Shaun feedback
 - [ ] Delete test data
 - [ ] Final testing
 - [ ] Deploy to Vercel
 - [ ] Hand off to Shaun
+
+### Future (Phase 11+)
+- [ ] AI features
